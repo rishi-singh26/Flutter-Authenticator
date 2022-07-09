@@ -53,6 +53,28 @@ class _LoginState extends State<Login> {
     passwordFocusNode.requestFocus();
   }
 
+  showDilogue(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text('Alert!'),
+          content: Text(message),
+          actions: [
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+                FirebaseAuth.instance.signOut();
+              },
+              child: const Text('Ok'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _startLogin(BuildContext context) async {
     String email = emailController.text;
     String password = passwordController.text;
@@ -97,9 +119,11 @@ class _LoginState extends State<Login> {
     setState(() {
       showSpinner = true;
     });
-    FirebaseAuth.instance
-        .signInWithEmailAndPassword(email: email, password: password)
-        .then((value) async {
+
+    try {
+      UserCredential value = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
       String userId = value.user!.uid;
       QuerySnapshot<Map<String, dynamic>> users = await FirebaseFirestore
           .instance
@@ -108,26 +132,8 @@ class _LoginState extends State<Login> {
           .get();
 
       if (users.size < 1) {
-        showCupertinoDialog(
-          context: context,
-          builder: (context) {
-            return CupertinoAlertDialog(
-              title: const Text('Alert!'),
-              content: Text(
-                  'Error while login\nUser not found\n${users.docs.toString()}'),
-              actions: [
-                CupertinoDialogAction(
-                  isDestructiveAction: true,
-                  onPressed: () {
-                    Navigator.pop(context);
-                    FirebaseAuth.instance.signOut();
-                  },
-                  child: const Text('Ok'),
-                ),
-              ],
-            );
-          },
-        );
+        showDilogue(
+            'Error while login\nUser not found\n${users.docs.toString()}');
         setState(() {
           showSpinner = false;
         });
@@ -141,36 +147,27 @@ class _LoginState extends State<Login> {
       );
       // ignore: use_build_context_synchronously
       StoreProvider.of<AppState>(context).dispatch(LoginAction(user: newUser));
-    }).catchError((err) {
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        showDilogue('No user found for that email.');
+        setState(() {
+          showSpinner = false;
+        });
+      } else if (e.code == 'wrong-password') {
+        showDilogue('Wrong password provided for that user.');
+        setState(() {
+          showSpinner = false;
+        });
+      }
+    } catch (e) {
       StoreProvider.of<AppState>(context)
-          .dispatch(LoginErrAction(errMess: err.toString()));
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: const Text('Login Error'),
-          content: Text(err.toString()),
-          actions: <CupertinoDialogAction>[
-            CupertinoDialogAction(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Cancel'),
-            ),
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Ok'),
-            ),
-          ],
-        ),
-      );
-    });
-    setState(() {
-      showSpinner = true;
-    });
-    // Login user with email and password
+          .dispatch(LoginErrAction(errMess: e.toString()));
+      showDilogue(e.toString());
+
+      setState(() {
+        showSpinner = false;
+      });
+    }
   }
 
   @override

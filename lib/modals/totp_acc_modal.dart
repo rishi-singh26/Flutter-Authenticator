@@ -7,6 +7,7 @@ class TotpAccount {
   final DateTime createdOn;
   final TotpAccountDetail data;
   final TotpOptions options;
+  final bool isFavourite;
 
   TotpAccount({
     required this.createdOn,
@@ -14,6 +15,7 @@ class TotpAccount {
     required this.id,
     required this.userId,
     required this.options,
+    required this.isFavourite,
   });
 
   static DateTime _firebaseDateToDate(Timestamp date) {
@@ -26,7 +28,8 @@ class TotpAccount {
         data = TotpAccountDetail.defaultValues(),
         id = '',
         userId = '',
-        options = TotpOptions.defaultValues();
+        options = TotpOptions.defaultValues(),
+        isFavourite = false;
 
   TotpAccount.fromJson(Map<String, dynamic> json, String docId)
       : createdOn = _firebaseDateToDate(json['createdOn']),
@@ -35,7 +38,8 @@ class TotpAccount {
         userId = json['userId'],
         options = json.containsKey('options')
             ? TotpOptions.fromJson(json['options'])
-            : TotpOptions.defaultValues();
+            : TotpOptions.defaultValues(),
+        isFavourite = json['isFavourite'];
 
   // TotpAccout.fromFireStoreQuerySnapShot(QuerySnapshot snap)
   // : _id = snap.docs.first.id,
@@ -61,11 +65,20 @@ class TotpAccount {
         'id': id,
         'userId': userId,
         'options': options.toJson(),
+        'isFavourite': isFavourite,
+      };
+
+  Map<String, dynamic> toApiJson() => {
+        'createdOn': createdOn,
+        'data': data.toJson(),
+        'userId': userId,
+        'options': options.toJson(),
+        'isFavourite': isFavourite,
       };
 
   @override
   String toString() =>
-      "{'createdOn': $createdOn, 'data': ${data.toString()}, 'userId': $userId, 'options': ${options.toString()}}";
+      "{'createdOn': $createdOn, 'data': ${data.toString()}, 'userId': $userId, 'options': ${options.toString()}, 'isFavourite': $isFavourite}";
 
   TotpAccntCryptoResp encrypt(RSAPublicKey key) {
     try {
@@ -81,11 +94,13 @@ class TotpAccount {
 
       return TotpAccntCryptoResp(
         data: TotpAccount(
-            createdOn: createdOn,
-            data: encryptedResp.data,
-            id: id,
-            userId: userId,
-            options: options),
+          createdOn: createdOn,
+          data: encryptedResp.data,
+          id: id,
+          userId: userId,
+          options: options,
+          isFavourite: isFavourite,
+        ),
         message: 'Success',
         status: true,
       );
@@ -116,6 +131,7 @@ class TotpAccount {
           id: id,
           userId: userId,
           options: options,
+          isFavourite: isFavourite,
         ),
         message: 'Success',
         status: true,
@@ -138,8 +154,10 @@ class TotpAccountDetail {
   final String secret;
   final String url;
   final List<String> tags;
+  final String backupCodes;
 
   TotpAccountDetail({
+    required this.backupCodes,
     required this.host,
     required this.issuer,
     required this.name,
@@ -165,7 +183,8 @@ class TotpAccountDetail {
   }
 
   TotpAccountDetail.defaultValues()
-      : host = '',
+      : backupCodes = '',
+        host = '',
         issuer = '',
         name = '',
         protocol = '',
@@ -174,7 +193,8 @@ class TotpAccountDetail {
         url = '';
 
   TotpAccountDetail.fromJson(Map<String, dynamic> json)
-      : host = json['host'],
+      : backupCodes = json['backupCodes'],
+        host = json['host'],
         issuer = json['issuer'],
         name = json['name'],
         protocol = json['protocol'],
@@ -184,6 +204,7 @@ class TotpAccountDetail {
         url = json['url'];
 
   Map<String, dynamic> toJson() => {
+        'backupCodes': backupCodes,
         'host': host,
         'issuer': issuer,
         'name': name,
@@ -195,14 +216,16 @@ class TotpAccountDetail {
 
   @override
   String toString() =>
-      "{'host': $host, 'issuer': $issuer, 'name:: $name 'protocol': $protocol, 'secret': $secret, 'tags': $tags, 'url': $url}";
+      "{'backupCodes': $backupCodes, 'host': $host, 'issuer': $issuer, 'name:: $name 'protocol': $protocol, 'secret': $secret, 'tags': $tags, 'url': $url}";
 
   TotpAccntDetailCryptoOprResp encrypt(RSAPublicKey key) {
     try {
       String encryptedSecret = key.encrypt(secret);
       String encryptedUrl = key.encrypt(url);
+      String encryptedBackupCodes = key.encrypt(backupCodes);
       return TotpAccntDetailCryptoOprResp(
         data: TotpAccountDetail(
+          backupCodes: encryptedBackupCodes,
           host: host,
           issuer: issuer,
           name: name,
@@ -227,8 +250,10 @@ class TotpAccountDetail {
     try {
       String decryptedSecret = key.decrypt(secret);
       String decryptedUrl = key.decrypt(url);
+      String decryptedBackupCodes = key.decrypt(backupCodes);
       return TotpAccntDetailCryptoOprResp(
         data: TotpAccountDetail(
+          backupCodes: decryptedBackupCodes,
           host: host,
           issuer: issuer,
           name: name,

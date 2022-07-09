@@ -1,5 +1,5 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
-import 'package:authenticator/pages/home/functions.dart';
+import 'package:authenticator/shared/functions/main.dart';
 import 'package:flutter/cupertino.dart';
 
 class AccountDetails extends StatefulWidget {
