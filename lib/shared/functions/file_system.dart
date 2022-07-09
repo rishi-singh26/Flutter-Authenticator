@@ -1,20 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 
 class FS {
-  static Future<String> get getDocumentDirPath async {
-    final directory = await getApplicationDocumentsDirectory();
-
-    return directory.path;
-  }
-
-  static Future<File> get _localFile async {
-    final path = await getDocumentDirPath;
-    return File('$path/counter.txt');
-  }
-
   static Future<ReadFileResp> readFileContents(File file) async {
     try {
       // Read the file
@@ -30,16 +18,16 @@ class FS {
     // Write the file
     try {
       File writtenFile = await file.writeAsString(text);
-      return WriteFileResp(file: writtenFile, status: true);
+      return WriteFileResp(file: writtenFile, status: true, message: '');
     } catch (e) {
-      return WriteFileResp(file: file, status: false);
+      return WriteFileResp(file: file, status: false, message: e.toString());
     }
   }
 
   static Future<PickFileResp> pickSingleFile() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles();
-      print(result.toString());
+      // print(result.toString());
       if (result != null) {
         File file = File(result.files.single.path ?? '');
         return PickFileResp(file: file, status: true);
@@ -48,6 +36,19 @@ class FS {
       }
     } catch (e) {
       return PickFileResp(file: File('path'), status: false);
+    }
+  }
+
+  static Future<PickDirResp> pickDirectory() async {
+    try {
+      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+      if (selectedDirectory == null) {
+        // User canceled the picker
+        return PickDirResp(path: '', status: false);
+      }
+      return PickDirResp(path: selectedDirectory, status: true);
+    } catch (e) {
+      return PickDirResp(path: e.toString(), status: false);
     }
   }
 }
@@ -61,11 +62,22 @@ class ReadFileResp {
 class WriteFileResp {
   final File file;
   final bool status;
-  WriteFileResp({required this.file, required this.status});
+  final String message;
+  WriteFileResp({
+    required this.file,
+    required this.status,
+    required this.message,
+  });
 }
 
 class PickFileResp {
   final bool status;
   final File file;
   PickFileResp({required this.file, required this.status});
+}
+
+class PickDirResp {
+  final bool status;
+  final String path;
+  PickDirResp({required this.path, required this.status});
 }

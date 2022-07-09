@@ -1,15 +1,17 @@
+import 'package:flutter/cupertino.dart';
+// Components
 import 'package:authenticator/pages/authentication/login.dart';
 import 'package:authenticator/pages/home/main.dart';
-import 'package:flutter/cupertino.dart';
+// Firebase
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_redux/flutter_redux.dart';
 import 'firebase_options.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// redux
+// Redux
 import 'package:authenticator/redux/combined_store.dart';
 import 'package:authenticator/redux/store/app.state.dart';
 import 'package:redux/redux.dart';
+import 'package:flutter_redux/flutter_redux.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

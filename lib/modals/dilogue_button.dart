@@ -3,11 +3,13 @@ class DilogueButton {
   Function func;
   bool isDestructive;
   bool isDefault;
-  DilogueButton(
-      {this.name = 'Ok',
-      this.func = no,
-      this.isDestructive = false,
-      this.isDefault = false});
+
+  DilogueButton({
+    this.name = 'Ok',
+    this.func = no,
+    this.isDestructive = false,
+    this.isDefault = false,
+  });
 }
 
 no() {}

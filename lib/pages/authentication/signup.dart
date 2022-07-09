@@ -1,3 +1,5 @@
+import 'package:authenticator/pages/authentication/key_pair.dart';
+import 'package:authenticator/shared/functions/regex.dart';
 import 'package:flutter/cupertino.dart';
 
 class SignUp extends StatefulWidget {
@@ -17,8 +19,6 @@ class _SignUpState extends State<SignUp> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController repeatPasswordController =
       TextEditingController();
-
-  bool _hidePassword = true;
 
   @override
   void initState() {
@@ -48,9 +48,9 @@ class _SignUpState extends State<SignUp> {
     super.dispose();
   }
 
-  _onFullNameSubmit(String fullName) {
-    emailFocusNode.requestFocus();
-  }
+  // _onFullNameSubmit(String fullName) {
+  //   emailFocusNode.requestFocus();
+  // }
 
   _onEmailSubmit(String email) {
     passwordFocusNode.requestFocus();
@@ -65,28 +65,50 @@ class _SignUpState extends State<SignUp> {
   }
 
   _startSignup() {
-    showCupertinoDialog(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('Auth Data'),
-        content: Text(
-          'Email: ${emailController.text}\nPassword: ${passwordController.text}',
+    String errMessage = '';
+    String email = emailController.text;
+    String password = passwordController.text;
+    String repeatPsswd = repeatPasswordController.text;
+    if (!validateEmail(email)) {
+      errMessage += 'Enter a valid emaail.';
+    }
+    if (password.length < 7) {
+      errMessage +=
+          '${errMessage.isEmpty ? '' : '\n'}Password should have minimum seven cahracters.';
+    }
+    if (password != repeatPsswd) {
+      errMessage += "${errMessage.isEmpty ? '' : '\n'}Passwords do not match.";
+    }
+    if (errMessage.isNotEmpty) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Alert!'),
+          content: Text(errMessage),
+          actions: <CupertinoDialogAction>[
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Ok'),
+            ),
+          ],
         ),
-        actions: <CupertinoDialogAction>[
-          CupertinoDialogAction(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Ok'),
-          ),
-        ],
+      );
+      return;
+    }
+    Navigator.pushReplacement(
+      context,
+      CupertinoPageRoute<Widget>(
+        fullscreenDialog: true,
+        builder: (BuildContext context) {
+          return KeypairPage(
+            email: email,
+            password: password,
+            // keyPair: rsaKeyPair,
+          );
+        },
       ),
     );
   }
@@ -94,25 +116,32 @@ class _SignUpState extends State<SignUp> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
+      // backgroundColor: CupertinoTheme.of(context).barBackgroundColor,
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Signup'),
       ),
       child: ListView(
         children: [
           const SizedBox(height: 40.0),
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-            child: CupertinoTextField(
-              controller: fullNameController,
-              placeholder: 'Full name',
-              padding: const EdgeInsets.symmetric(
-                vertical: 12.0,
-                horizontal: 10.0,
-              ),
-              onSubmitted: _onFullNameSubmit,
-            ),
+          Image.asset(
+            'images/signup.png',
+            width: 220.0,
+            height: 220.0,
           ),
+          const SizedBox(height: 40.0),
+          // Padding(
+          //   padding:
+          //       const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          //   child: CupertinoTextField(
+          //     controller: fullNameController,
+          //     placeholder: 'Full name',
+          //     padding: const EdgeInsets.symmetric(
+          //       vertical: 12.0,
+          //       horizontal: 10.0,
+          //     ),
+          //     onSubmitted: _onFullNameSubmit,
+          //   ),
+          // ),
           Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
@@ -127,6 +156,7 @@ class _SignUpState extends State<SignUp> {
                 vertical: 12.0,
                 horizontal: 10.0,
               ),
+              autofillHints: const [AutofillHints.email],
             ),
           ),
           Padding(
@@ -135,7 +165,7 @@ class _SignUpState extends State<SignUp> {
             child: CupertinoTextField(
               controller: passwordController,
               placeholder: 'Password',
-              obscureText: _hidePassword,
+              obscureText: true,
               autocorrect: false,
               enableSuggestions: false,
               focusNode: passwordFocusNode,
@@ -144,6 +174,7 @@ class _SignUpState extends State<SignUp> {
                 vertical: 12.0,
                 horizontal: 10.0,
               ),
+              autofillHints: const [AutofillHints.newPassword],
             ),
           ),
           Padding(
@@ -152,7 +183,7 @@ class _SignUpState extends State<SignUp> {
             child: CupertinoTextField(
               controller: repeatPasswordController,
               placeholder: 'Repeat passeord',
-              obscureText: _hidePassword,
+              obscureText: true,
               autocorrect: false,
               enableSuggestions: false,
               focusNode: repeatPasswordFocusNode,
@@ -161,25 +192,19 @@ class _SignUpState extends State<SignUp> {
                 vertical: 12.0,
                 horizontal: 10.0,
               ),
+              autofillHints: const [AutofillHints.newPassword],
             ),
           ),
           const SizedBox(height: 30.0),
-          Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                  child: CupertinoButton.filled(
-                    onPressed: _startSignup,
-                    child: Text(
-                      'Sign Up',
-                      style:
-                          CupertinoTheme.of(context).textTheme.pickerTextStyle,
-                    ),
-                  ),
-                ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30.0),
+            child: CupertinoButton.filled(
+              onPressed: _startSignup,
+              child: const Text(
+                'Next',
+                style: TextStyle(color: CupertinoColors.white),
               ),
-            ],
+            ),
           ),
         ],
       ),

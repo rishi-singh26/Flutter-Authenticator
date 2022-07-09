@@ -63,11 +63,12 @@ class _ResetPasswordState extends State<ResetPassword> {
       ),
       child: ListView(
         children: [
-          // Platform.isWindows
-          //     ? TopBar(goBack: () {}, isBackBtnDisabled: true)
-          //     : const SizedBox(
-          //         height: 0.0,
-          //       ),
+          const SizedBox(height: 40.0),
+          Image.asset(
+            'images/forgotPass2.png',
+            width: 260.0,
+            height: 260.0,
+          ),
           const SizedBox(height: 40.0),
           Padding(
             padding:
@@ -86,22 +87,15 @@ class _ResetPasswordState extends State<ResetPassword> {
             ),
           ),
           const SizedBox(height: 30.0),
-          Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                  child: CupertinoButton.filled(
-                    onPressed: _startPasswordReset,
-                    child: Text(
-                      'Send password reset link',
-                      style:
-                          CupertinoTheme.of(context).textTheme.pickerTextStyle,
-                    ),
-                  ),
-                ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30.0),
+            child: CupertinoButton.filled(
+              onPressed: _startPasswordReset,
+              child: const Text(
+                'Send password reset link',
+                style: TextStyle(color: CupertinoColors.white),
               ),
-            ],
+            ),
           ),
         ],
       ),

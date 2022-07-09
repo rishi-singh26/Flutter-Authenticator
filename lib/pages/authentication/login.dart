@@ -3,13 +3,18 @@ import 'package:authenticator/pages/authentication/reset_pass.dart';
 import 'package:authenticator/pages/authentication/signup.dart';
 import 'package:authenticator/redux/auth/auth_action.dart';
 import 'package:authenticator/redux/store/app.state.dart';
+import 'package:authenticator/shared/functions/regex.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 
 class Login extends StatefulWidget {
-  const Login({Key? key}) : super(key: key);
+  // final PageController controller;
+  const Login({
+    Key? key,
+    // required this.controller,
+  }) : super(key: key);
 
   @override
   State<Login> createState() => _LoginState();
@@ -21,7 +26,7 @@ class _LoginState extends State<Login> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  bool _hidePassword = true;
+  bool showSpinner = false;
 
   @override
   void initState() {
@@ -51,6 +56,47 @@ class _LoginState extends State<Login> {
   void _startLogin(BuildContext context) async {
     String email = emailController.text;
     String password = passwordController.text;
+    if (!validateEmail(email)) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Alert!'),
+          content: const Text('Enter a valid email.'),
+          actions: <CupertinoDialogAction>[
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Ok'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    if (password.isEmpty) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Alert!'),
+          content: const Text('Enter your password.'),
+          actions: <CupertinoDialogAction>[
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Ok'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    setState(() {
+      showSpinner = true;
+    });
     FirebaseAuth.instance
         .signInWithEmailAndPassword(email: email, password: password)
         .then((value) async {
@@ -82,6 +128,9 @@ class _LoginState extends State<Login> {
             );
           },
         );
+        setState(() {
+          showSpinner = false;
+        });
         return;
       }
       Map<String, dynamic> user = users.docs[0].data();
@@ -118,6 +167,9 @@ class _LoginState extends State<Login> {
         ),
       );
     });
+    setState(() {
+      showSpinner = true;
+    });
     // Login user with email and password
   }
 
@@ -125,15 +177,17 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       // backgroundColor: CupertinoTheme.of(context).barBackgroundColor,
+      navigationBar:
+          const CupertinoNavigationBar(middle: Text('Authenticator')),
       child: ListView(
         children: [
-          const SizedBox(height: 40.0),
-          Center(
-              child: Text(
-            'Authenticator',
-            style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
-          )),
-          const SizedBox(height: 40.0),
+          const SizedBox(height: 20.0),
+          Image.asset(
+            'images/login.png',
+            width: 250.0,
+            height: 250.0,
+          ),
+          const SizedBox(height: 20.0),
           Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
@@ -142,6 +196,7 @@ class _LoginState extends State<Login> {
               controller: emailController,
               keyboardType: TextInputType.emailAddress,
               onSubmitted: _onEmailSubmit,
+              readOnly: showSpinner,
               padding: const EdgeInsets.symmetric(
                 vertical: 12.0,
                 horizontal: 10.0,
@@ -154,7 +209,8 @@ class _LoginState extends State<Login> {
             child: CupertinoTextField(
               placeholder: 'Password',
               controller: passwordController,
-              obscureText: _hidePassword,
+              obscureText: true,
+              readOnly: showSpinner,
               // keyboardType: TextInputType.none,
               autocorrect: false,
               enableSuggestions: false,
@@ -171,10 +227,12 @@ class _LoginState extends State<Login> {
             padding: const EdgeInsets.symmetric(horizontal: 30.0),
             child: CupertinoButton.filled(
               onPressed: () => _startLogin(context),
-              child: Text(
-                'Login',
-                style: CupertinoTheme.of(context).textTheme.pickerTextStyle,
-              ),
+              child: showSpinner
+                  ? const CupertinoActivityIndicator()
+                  : const Text(
+                      'Login',
+                      style: TextStyle(color: CupertinoColors.white),
+                    ),
             ),
           ),
           const SizedBox(height: 30.0),
@@ -186,11 +244,20 @@ class _LoginState extends State<Login> {
               children: [
                 CupertinoButton(
                   onPressed: () {
-                    Navigator.push(context, CupertinoPageRoute<void>(
-                      builder: (BuildContext context) {
-                        return const SignUp();
-                      },
-                    ));
+                    // widget.controller.animateToPage(
+                    //   1,
+                    //   duration: const Duration(milliseconds: 300),
+                    //   curve: Curves.easeIn,
+                    // );
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute<void>(
+                        fullscreenDialog: true,
+                        builder: (BuildContext context) {
+                          return const SignUp();
+                        },
+                      ),
+                    );
                   },
                   child: const Text(
                     'Sign Up',
@@ -199,6 +266,11 @@ class _LoginState extends State<Login> {
                 ),
                 CupertinoButton(
                   onPressed: () {
+                    // widget.controller.animateToPage(
+                    //   2,
+                    //   duration: const Duration(milliseconds: 300),
+                    //   curve: Curves.easeIn,
+                    // );
                     Navigator.push(context, CupertinoPageRoute<Widget>(
                         builder: (BuildContext context) {
                       return const ResetPassword();

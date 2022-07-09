@@ -31,7 +31,9 @@ class _ScannerState extends State<Scanner> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(),
+      navigationBar: const CupertinoNavigationBar(
+        previousPageTitle: 'Home',
+      ),
       child: Stack(
         children: <Widget>[
           SizedBox(child: _buildQrView(context)),

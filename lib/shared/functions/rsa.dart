@@ -8,7 +8,7 @@ class CryptoResult {
 
 class Encrypt {
   static RSAKeypair getKeyPair() {
-    RSAKeypair rsaKeypair = RSAKeypair.fromRandom(keySize: 4096);
+    RSAKeypair rsaKeypair = RSAKeypair.fromRandom();
     return rsaKeypair;
   }
 

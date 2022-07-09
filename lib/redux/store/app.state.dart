@@ -1,12 +1,18 @@
 import 'package:authenticator/redux/auth/auth_state.dart';
+import 'package:authenticator/redux/pvKey/pv_key_state.dart';
 
 class AppState {
   final AuthState auth;
+  final PrivateKeyState pvKey;
 
-  AppState({required this.auth});
+  AppState({
+    required this.auth,
+    required this.pvKey,
+  });
 
   factory AppState.initial() => AppState(
         auth: AuthState.initialState(),
+        pvKey: PrivateKeyState.initialState(),
       );
 
   @override
@@ -28,6 +34,9 @@ class AppState {
       auth: json == null
           ? AuthState.initialState()
           : AuthState.fromJson(json['auth']),
+      pvKey: json == null
+          ? PrivateKeyState.initialState()
+          : PrivateKeyState.fromJson(json['pvKey']),
     );
   }
 
@@ -39,5 +48,6 @@ class AppState {
 
   Map<String, dynamic> toJson() => {
         'auth': auth.toJson(),
+        'pvKey': pvKey.toJson(),
       };
 }
