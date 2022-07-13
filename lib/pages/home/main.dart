@@ -23,6 +23,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<TotpAccount> totpAccounts = [];
+  final TextEditingController _searchController = TextEditingController();
 
   _attachOrDetackPVKey(
     BuildContext topLevelContext,
@@ -130,58 +131,70 @@ class _MyHomePageState extends State<MyHomePage> {
         .snapshots();
 
     return CupertinoPageScaffold(
-      // backgroundColor: CupertinoTheme.of(context).barBackgroundColor,
-      navigationBar: CupertinoNavigationBar(
-        // border: null,
-        // backgroundColor: CupertinoTheme.of(context).scaffoldBackgroundColor,
-        leading: CupertinoButton(
-          onPressed: () => _showActions(context),
-          padding: const EdgeInsets.all(0.0),
-          alignment: Alignment.centerLeft,
-          child: const Icon(CupertinoIcons.settings, size: 23),
-        ),
-        middle: const Text('Authenticator'),
-        trailing: CupertinoButton(
-          onPressed: _navigateToScanner,
-          padding: const EdgeInsets.all(0.0),
-          alignment: Alignment.centerRight,
-          child: const Icon(CupertinoIcons.add_circled, size: 23),
-        ),
-      ),
-      child: StreamBuilder<QuerySnapshot>(
-        stream: accountsStream,
-        builder: (
-          BuildContext context,
-          AsyncSnapshot<QuerySnapshot> snapshot,
-        ) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text("Something went wrong ${snapshot.error.toString()}"),
-            );
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CupertinoActivityIndicator());
-          }
-          if (snapshot.hasData && snapshot.data?.docs.isEmpty == null) {
-            return const Center(child: Text("Document does not exist"));
-          }
-          if (snapshot.data!.docs.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 15.0),
-              child: Text('No Accounts available'),
-            );
-          }
-          List<TotpAccount> accounts =
-              snapshot.data!.docs.map((DocumentSnapshot doc) {
-            Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
-            TotpAccount account = TotpAccount.fromJson(data, doc.id);
-            return account;
-          }).toList();
-          return Container(
-            margin: const EdgeInsets.only(top: 25.0),
-            child: StoreConnector<AppState, AppState>(
+      child: NestedScrollView(
+        headerSliverBuilder: ((context, innerBoxIsScrolled) {
+          return [
+            CupertinoSliverNavigationBar(
+              border: null,
+              leading: CupertinoButton(
+                onPressed: () => _showActions(context),
+                padding: const EdgeInsets.all(0.0),
+                alignment: Alignment.centerLeft,
+                child: const Icon(CupertinoIcons.settings, size: 23),
+              ),
+              largeTitle: const Text('Authenticator'),
+              trailing: CupertinoButton(
+                onPressed: _navigateToScanner,
+                padding: const EdgeInsets.all(0.0),
+                alignment: Alignment.centerRight,
+                child: const Icon(CupertinoIcons.add_circled, size: 23),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 15.0),
+                child: CupertinoSearchTextField(
+                  controller: _searchController,
+                ),
+              ),
+            )
+          ];
+        }),
+        body: StreamBuilder<QuerySnapshot>(
+          stream: accountsStream,
+          builder: (
+            BuildContext context,
+            AsyncSnapshot<QuerySnapshot> snapshot,
+          ) {
+            if (snapshot.hasError) {
+              return Center(
+                child:
+                    Text("Something went wrong ${snapshot.error.toString()}"),
+              );
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CupertinoActivityIndicator());
+            }
+            if (snapshot.hasData && snapshot.data?.docs.isEmpty == null) {
+              return const Center(child: Text("Document does not exist"));
+            }
+            if (snapshot.data!.docs.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 15.0),
+                child: Text('No Accounts available'),
+              );
+            }
+            List<TotpAccount> accounts =
+                snapshot.data!.docs.map((DocumentSnapshot doc) {
+              Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
+              TotpAccount account = TotpAccount.fromJson(data, doc.id);
+              return account;
+            }).toList();
+            return StoreConnector<AppState, AppState>(
               converter: (store) => store.state,
               builder: (context, state) => ListView.builder(
+                padding: const EdgeInsets.only(top: 0),
                 itemCount: accounts.length,
                 itemBuilder: (context, index) {
                   if (state.pvKey.isAttached) {
@@ -209,9 +222,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   );
                 },
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

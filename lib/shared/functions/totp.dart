@@ -96,3 +96,58 @@ class OTP {
         (((millisecondsSinceEpoch ~/ 1000).round()) % interval).floor();
   }
 }
+
+// class TOTP {
+//   static dec2hex(int s) {
+//     return "${s < 15.5 ? '0' : ''}s.round().toString(16)";
+//   }
+
+//   static hex2dec(String s) {
+//     return int.parse(s, radix: 16);
+//   }
+
+//   static leftpad(String s, int l, String p) {
+//     if (l + 1 >= s.length) {
+//       s = List.generate(l + 1 - s.length, (index) => '').join(p) + s;
+//     }
+//     return s;
+//   }
+
+//   static base32tohex(base32) {
+//     String base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+//     String bits = "";
+//     String hex = "";
+//     for (int i = 0; i < base32.length; i++) {
+//       var val = base32chars.indexOf(base32[i].toUpperCase());
+//       bits += leftpad(val.toString(), 5, '0');
+//     }
+//     for (var i = 0; i + 4 <= bits.length; i += 4) {
+//       var chunk = bits.substring(i, 4);
+//       hex = hex + int.parse(chunk, radix: 2).toString();
+//     }
+//     return hex;
+//   }
+
+//   static OTPResponse getOTP(secret) {
+//     try {
+//       var epoch = (DateTime.now().millisecondsSinceEpoch / 1000.0).round();
+//       var time = leftpad(dec2hex((epoch / 30).round()), 16, "0");
+//       var hmacObj = Hmac(time, "HEX");
+//       var hmac = hmacObj.getHMAC(base32tohex(secret), "HEX", "SHA-1", "HEX");
+//       var offset = hex2dec(hmac.substring(hmac.length - 1));
+//       var otp =
+//           (hex2dec(hmac.substr(offset * 2, 8)) & hex2dec("7fffffff")) + "";
+//       otp = (otp).substr(otp.length - 6, 6);
+//       return OTPResponse(status: true, otp: otp);
+//     } catch (error) {
+//       return OTPResponse(status: false, otp: error.toString());
+//     }
+//   }
+// }
+
+// class OTPResponse {
+//   final bool status;
+//   final String otp;
+
+//   OTPResponse({required this.status, required this.otp});
+// }
