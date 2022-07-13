@@ -16,6 +16,8 @@ class _AccountDetailsState extends State<AccountDetails> {
   Object _selectedDigitsCount = '6';
   Object _selectedInterval = '30';
 
+  late TextEditingController backupCodesController;
+
   resetOptions() {
     setState(() {
       _selectedAlgorithm = 'SHA1';
@@ -26,6 +28,7 @@ class _AccountDetailsState extends State<AccountDetails> {
 
   @override
   void initState() {
+    backupCodesController = TextEditingController();
     TotpOptions options = widget.account.options;
     _advancedOptionsOn = options.isEnabled;
     _selectedAlgorithm = options.selectedAlgorithm;
@@ -123,6 +126,42 @@ class _AccountDetailsState extends State<AccountDetails> {
                       isInput: false,
                     ),
                   ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(
+                  bottom: 7.0,
+                  top: 25.0,
+                  left: 7.0,
+                ),
+                child: Text(
+                  'BACKUP CODES (OPTIONAL)',
+                  style: TextStyle(
+                    color: CupertinoTheme.of(context)
+                        .textTheme
+                        .tabLabelTextStyle
+                        .color,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(15.0),
+                decoration: BoxDecoration(
+                  color: CupertinoTheme.of(context).barBackgroundColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(13.0)),
+                ),
+                child: CupertinoTextField(
+                  placeholder:
+                      'ex.:\n1) 5500 0251\n2)0021 5987\n3)4207 9510\n4)...',
+                  padding: const EdgeInsets.only(bottom: 2),
+                  decoration: BoxDecoration(
+                    color: CupertinoTheme.of(context).barBackgroundColor,
+                    border: null,
+                  ),
+                  controller: backupCodesController,
+                  style: CupertinoTheme.of(context).textTheme.textStyle,
+                  maxLines: 5,
                 ),
               ),
               Container(

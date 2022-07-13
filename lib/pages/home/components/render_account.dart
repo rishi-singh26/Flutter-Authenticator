@@ -159,7 +159,7 @@ class _RenderAccountState extends State<RenderAccount>
                   },
                   backgroundColor: CupertinoColors.systemGrey,
                   foregroundColor: CupertinoColors.white,
-                  icon: CupertinoIcons.info,
+                  icon: CupertinoIcons.pencil_ellipsis_rectangle,
                 ),
               ],
             ),

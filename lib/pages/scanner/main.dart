@@ -110,13 +110,13 @@ class _ScannerState extends State<Scanner> {
           : '';
       String algorithm = uri.queryParameters.containsKey('algorithm')
           ? uri.queryParameters['algorithm'].toString()
-          : '';
+          : 'SHA1';
       String digits = uri.queryParameters.containsKey('digits')
           ? uri.queryParameters['digits'].toString()
-          : '';
+          : '6';
       String period = uri.queryParameters.containsKey('period')
           ? uri.queryParameters['period'].toString()
-          : '';
+          : '30';
 
       TotpAccount account = TotpAccount(
         createdOn: DateTime.now(),
@@ -149,6 +149,7 @@ class _ScannerState extends State<Scanner> {
       await FirebaseFirestore.instance
           .collection('newTotpAccounts')
           .add(encryptedAccount.data.toApiJson());
+      // ignore: use_build_context_synchronously
       Navigator.canPop(context) ? Navigator.pop(context) : null;
       return true;
     } catch (e) {
@@ -313,7 +314,7 @@ class _ScannerState extends State<Scanner> {
                       ),
                     ),
                   ),
-                  const BottomButtons(curretnPage: 0),
+                  const BottomButtons(),
                 ],
               ),
             ),

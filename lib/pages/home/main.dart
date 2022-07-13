@@ -14,6 +14,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:redux/redux.dart';
 
+const double _kItemExtent = 32.0;
+const List<String> _sortingNames = <String>[
+  'Newest First',
+  'Oldest First',
+  'Service (A to Z)',
+  'Service (Z to A)',
+];
+
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key}) : super(key: key);
 
@@ -24,6 +32,30 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<TotpAccount> totpAccounts = [];
   final TextEditingController _searchController = TextEditingController();
+
+  int _selectedSorting = 0;
+
+  // This shows a CupertinoModalPopup with a reasonable fixed height which hosts CupertinoPicker.
+  void _showDialog(Widget child) {
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (BuildContext context) => Container(
+        height: 216,
+        padding: const EdgeInsets.only(top: 6.0),
+        // The Bottom margin is provided to align the popup above the system navigation bar.
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        // Provide a background color for the popup.
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        // Use a SafeArea widget to avoid system overlaps.
+        child: SafeArea(
+          top: false,
+          child: child,
+        ),
+      ),
+    ).then((value) => setState(() {}));
+  }
 
   _attachOrDetackPVKey(
     BuildContext topLevelContext,
@@ -143,11 +175,35 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: const Icon(CupertinoIcons.settings, size: 23),
               ),
               largeTitle: const Text('Authenticator'),
-              trailing: CupertinoButton(
-                onPressed: _navigateToScanner,
-                padding: const EdgeInsets.all(0.0),
-                alignment: Alignment.centerRight,
-                child: const Icon(CupertinoIcons.add_circled, size: 23),
+              trailing: StatefulBuilder(
+                builder: ((context, setState) {
+                  return CupertinoButton(
+                    onPressed: () => _showDialog(
+                      CupertinoPicker(
+                        magnification: 1.22,
+                        squeeze: 1.2,
+                        useMagnifier: true,
+                        itemExtent: _kItemExtent,
+                        onSelectedItemChanged: (int selectedItem) {
+                          setState(() {
+                            _selectedSorting = selectedItem;
+                          });
+                        },
+                        children: List<Widget>.generate(_sortingNames.length,
+                            (int index) {
+                          return Center(
+                            child: Text(
+                              _sortingNames[index],
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(0.0),
+                    alignment: Alignment.centerRight,
+                    child: const Icon(CupertinoIcons.ellipsis_circle, size: 23),
+                  );
+                }),
               ),
             ),
             SliverToBoxAdapter(
@@ -161,69 +217,134 @@ class _MyHomePageState extends State<MyHomePage> {
             )
           ];
         }),
-        body: StreamBuilder<QuerySnapshot>(
-          stream: accountsStream,
-          builder: (
-            BuildContext context,
-            AsyncSnapshot<QuerySnapshot> snapshot,
-          ) {
-            if (snapshot.hasError) {
-              return Center(
-                child:
-                    Text("Something went wrong ${snapshot.error.toString()}"),
-              );
-            }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CupertinoActivityIndicator());
-            }
-            if (snapshot.hasData && snapshot.data?.docs.isEmpty == null) {
-              return const Center(child: Text("Document does not exist"));
-            }
-            if (snapshot.data!.docs.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 15.0),
-                child: Text('No Accounts available'),
-              );
-            }
-            List<TotpAccount> accounts =
-                snapshot.data!.docs.map((DocumentSnapshot doc) {
-              Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
-              TotpAccount account = TotpAccount.fromJson(data, doc.id);
-              return account;
-            }).toList();
-            return StoreConnector<AppState, AppState>(
-              converter: (store) => store.state,
-              builder: (context, state) => ListView.builder(
-                padding: const EdgeInsets.only(top: 0),
-                itemCount: accounts.length,
-                itemBuilder: (context, index) {
-                  if (state.pvKey.isAttached) {
-                    TotpAccntCryptoResp decryptedData = accounts[index]
-                        .decrypt(RSAPrivateKey.fromPEM(state.pvKey.key));
-                    if (!decryptedData.status) {
-                      return RenderAccountLocked(
-                        accountData: accounts[index],
-                        onPressed: () => _showActions(context),
-                        isTopElement: index == 0,
-                        isBottomElement: index == accounts.length - 1,
-                      );
-                    }
-                    return RenderAccount(
-                      accountData: decryptedData.data,
-                      isTopElement: index == 0,
-                      isBottomElement: index == accounts.length - 1,
+        body: Column(
+          children: [
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: accountsStream,
+                builder: (
+                  BuildContext context,
+                  AsyncSnapshot<QuerySnapshot> snapshot,
+                ) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                          "Something went wrong ${snapshot.error.toString()}"),
                     );
                   }
-                  return RenderAccountLocked(
-                    accountData: accounts[index],
-                    onPressed: () => _showActions(context),
-                    isTopElement: index == 0,
-                    isBottomElement: index == accounts.length - 1,
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CupertinoActivityIndicator());
+                  }
+                  if (snapshot.hasData && snapshot.data?.docs.isEmpty == null) {
+                    return const Center(child: Text("Document does not exist"));
+                  }
+                  if (snapshot.data!.docs.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 15.0),
+                      child: Text('No Accounts available'),
+                    );
+                  }
+                  List<TotpAccount> accounts =
+                      snapshot.data!.docs.map((DocumentSnapshot doc) {
+                    Map<String, dynamic> data =
+                        doc.data()! as Map<String, dynamic>;
+                    TotpAccount account = TotpAccount.fromJson(data, doc.id);
+                    return account;
+                  }).toList();
+                  return StoreConnector<AppState, AppState>(
+                    converter: (store) => store.state,
+                    builder: (context, state) => ListView.builder(
+                      padding: const EdgeInsets.only(top: 0),
+                      itemCount: accounts.length,
+                      itemBuilder: (context, index) {
+                        if (state.pvKey.isAttached) {
+                          TotpAccntCryptoResp decryptedData = accounts[index]
+                              .decrypt(RSAPrivateKey.fromPEM(state.pvKey.key));
+                          if (!decryptedData.status) {
+                            return RenderAccountLocked(
+                              accountData: accounts[index],
+                              onPressed: () => _showActions(context),
+                              isTopElement: index == 0,
+                              isBottomElement: index == accounts.length - 1,
+                            );
+                          }
+                          return RenderAccount(
+                            accountData: decryptedData.data,
+                            isTopElement: index == 0,
+                            isBottomElement: index == accounts.length - 1,
+                          );
+                        }
+                        return RenderAccountLocked(
+                          accountData: accounts[index],
+                          onPressed: () => _showActions(context),
+                          isTopElement: index == 0,
+                          isBottomElement: index == accounts.length - 1,
+                        );
+                      },
+                    ),
                   );
                 },
               ),
-            );
-          },
+            ),
+            Container(
+              color: CupertinoTheme.of(context).barBackgroundColor,
+              alignment: Alignment.center,
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 10.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 10.0,
+                horizontal: 15.0,
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        CupertinoIcons.circle_fill,
+                        color: CupertinoColors.systemGreen,
+                        size: 10,
+                      ),
+                      const SizedBox(width: 4.0),
+                      Text(
+                        'Synchronised',
+                        style: TextStyle(
+                          color: CupertinoTheme.of(context)
+                              .textTheme
+                              .tabLabelTextStyle
+                              .color,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: _navigateToScanner,
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: CupertinoTheme.of(context).primaryColor,
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(15.0),
+                          ),
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.add,
+                          color: CupertinoColors.white,
+                          size: 20.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
