@@ -40,3 +40,70 @@ String getImageName(String issuer) {
   }
   return 'account';
 }
+
+/// Check if [n] is power of 2
+///
+/// 23 => false
+///
+/// 24 => false
+///
+/// 32 => true
+bool isPowerOfTwo(int n) {
+  double num = n.toDouble();
+  if (num == 0) return false;
+  while (num != 1) {
+    if (num % 2 != 0) return false;
+    num = num / 2;
+  }
+  return true;
+}
+
+/// Get highest power of 2 smaller than or equal to [n].
+///
+/// IP = 37; OP = 32;
+///
+/// IP = 23; OP = 16;
+int highestPowerof2(int n) {
+  int res = 0;
+  for (int i = n; i >= 1; i--) {
+    if ((i & (i - 1)) == 0) {
+      res = i;
+      break;
+    }
+  }
+  return res;
+}
+
+/// Split a string in half
+///
+/// I/P = '123456'; O/P = '123 456'
+///
+/// I/P = '1234567'; O/P = '123 4567'
+///
+/// I/P = '12345678'; O/P = '1234 5678'
+String splitStringInHalf(String str) {
+  return '${str.substring(0, (str.length / 2).floor())} ${str.substring((str.length / 2).floor())}';
+}
+
+/// Remove spaces from a string
+///
+/// IP = '123 456'; OP = '123456';
+String stripSpaces(String str) {
+  return str.replaceAll(' ', '');
+}
+
+/// Return the next multiple of eight for the given [num]
+///
+/// IP = 50; OP = 56;
+///
+/// IP = 21; OP = 24;
+int nextMultipleOfEight(int num) {
+  int result = -1;
+  for (int i = num; i < num + 8; i++) {
+    if (i % 8 == 0) {
+      result = i;
+      return result;
+    }
+  }
+  return result;
+}

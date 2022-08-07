@@ -303,6 +303,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.7.0"
+  ootp:
+    dependency: "direct main"
+    description:
+      name: ootp
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.1"
   otp:
     dependency: "direct main"
     description:
@@ -394,6 +401,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "4.2.4"
+  pull_down_button:
+    dependency: "direct main"
+    description:
+      name: pull_down_button
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.0-beta.6"
   qr_code_scanner:
     dependency: "direct main"
     description:

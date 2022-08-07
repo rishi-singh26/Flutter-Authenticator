@@ -59,17 +59,28 @@ class _EnterUrlState extends State<EnterUrl> {
         String algorithm =
             uriComponents.queryParameters.containsKey('algorithm')
                 ? uriComponents.queryParameters['algorithm'].toString()
-                : '';
+                : 'SHA1';
         String digits = uriComponents.queryParameters.containsKey('digits')
             ? uriComponents.queryParameters['digits'].toString()
-            : '';
+            : '6';
         String period = uriComponents.queryParameters.containsKey('period')
             ? uriComponents.queryParameters['period'].toString()
-            : '';
+            : '30';
         String account = uriComponents.pathSegments[0].toString();
         String secret = uriComponents.queryParameters.containsKey('secret')
             ? uriComponents.queryParameters['secret'].toString()
             : '';
+
+        if (secret.isEmpty) {
+          // ignore: use_build_context_synchronously
+          _showDilogue(
+            context,
+            'Alert!',
+            'Invalid account data.',
+            true,
+          );
+          return;
+        }
         String host = uriComponents.host;
 
         TotpAccount accntData = TotpAccount(
@@ -85,6 +96,7 @@ class _EnterUrlState extends State<EnterUrl> {
             url: url,
           ),
           id: '',
+          name: serviceName.toUpperCase(),
           userId: FirebaseAuth.instance.currentUser?.uid ?? '',
           options: TotpOptions(
             isEnabled: false,

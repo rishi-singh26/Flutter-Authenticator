@@ -8,6 +8,7 @@ class TotpAccount {
   final TotpAccountDetail data;
   final TotpOptions options;
   final bool isFavourite;
+  final String name;
 
   TotpAccount({
     required this.createdOn,
@@ -16,6 +17,7 @@ class TotpAccount {
     required this.userId,
     required this.options,
     required this.isFavourite,
+    required this.name,
   });
 
   static DateTime _firebaseDateToDate(Timestamp date) {
@@ -29,7 +31,8 @@ class TotpAccount {
         id = '',
         userId = '',
         options = TotpOptions.defaultValues(),
-        isFavourite = false;
+        isFavourite = false,
+        name = '';
 
   TotpAccount.fromJson(Map<String, dynamic> json, String docId)
       : createdOn = _firebaseDateToDate(json['createdOn']),
@@ -39,7 +42,8 @@ class TotpAccount {
         options = json.containsKey('options')
             ? TotpOptions.fromJson(json['options'])
             : TotpOptions.defaultValues(),
-        isFavourite = json['isFavourite'];
+        isFavourite = json['isFavourite'],
+        name = json.containsKey('name') ? json['name'] : '';
 
   // TotpAccout.fromFireStoreQuerySnapShot(QuerySnapshot snap)
   // : _id = snap.docs.first.id,
@@ -66,6 +70,7 @@ class TotpAccount {
         'userId': userId,
         'options': options.toJson(),
         'isFavourite': isFavourite,
+        'name': name,
       };
 
   Map<String, dynamic> toApiJson() => {
@@ -74,11 +79,12 @@ class TotpAccount {
         'userId': userId,
         'options': options.toJson(),
         'isFavourite': isFavourite,
+        'name': name,
       };
 
   @override
   String toString() =>
-      "{'createdOn': $createdOn, 'data': ${data.toString()}, 'userId': $userId, 'options': ${options.toString()}, 'isFavourite': $isFavourite}";
+      "{'createdOn': $createdOn, 'data': ${data.toString()}, 'userId': $userId, 'options': ${options.toString()}, 'isFavourite': $isFavourite, 'name': $name, 'id': $id, }";
 
   TotpAccntCryptoResp encrypt(RSAPublicKey key) {
     try {
@@ -100,6 +106,7 @@ class TotpAccount {
           userId: userId,
           options: options,
           isFavourite: isFavourite,
+          name: name,
         ),
         message: 'Success',
         status: true,
@@ -132,6 +139,7 @@ class TotpAccount {
           userId: userId,
           options: options,
           isFavourite: isFavourite,
+          name: name,
         ),
         message: 'Success',
         status: true,

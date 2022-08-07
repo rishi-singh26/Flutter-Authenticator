@@ -1,7 +1,6 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
 import 'package:authenticator/redux/combined_store.dart';
 import 'package:authenticator/redux/store/app.state.dart';
-import 'package:authenticator/shared/functions/main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypton/crypton.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -80,7 +79,6 @@ class _EnterManuallyState extends State<EnterManually> {
     String serviceName = serviceNameController.text;
     String accountName = accountNameController.text;
     String secret = keyController.text;
-    String host = 'totp';
 
     if (serviceName.isEmpty) {
       // ignore: use_build_context_synchronously
@@ -154,6 +152,7 @@ class _EnterManuallyState extends State<EnterManually> {
           url: 'otpauth://totp/$accountName?secret=$secret&issuer=$serviceName',
         ),
         id: '',
+        name: serviceName.toUpperCase(),
         userId: FirebaseAuth.instance.currentUser?.uid ?? '',
         options: TotpOptions(
           isEnabled: _advancedOptionsOn,

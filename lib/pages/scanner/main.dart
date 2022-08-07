@@ -131,6 +131,7 @@ class _ScannerState extends State<Scanner> {
           url: result?.code ?? '',
         ),
         id: 'id',
+        name: issuer.toUpperCase(),
         userId: FirebaseAuth.instance.currentUser?.uid ?? '',
         options: TotpOptions(
           isEnabled: false,
@@ -172,154 +173,157 @@ class _ScannerState extends State<Scanner> {
             ? uri.queryParameters['issuer'].toString()
             : ''
         : '';
-    return NestedScrollView(
-      headerSliverBuilder: ((context, innerBoxIsScrolled) {
-        return [
-          CupertinoSliverNavigationBar(
-            border: null,
-            leading: CupertinoButton(
-              onPressed: () {
-                Navigator.canPop(context) ? Navigator.pop(context) : null;
-              },
-              padding: const EdgeInsets.all(0.0),
-              alignment: Alignment.centerLeft,
-              child: const Text('Cancel'),
+    return CupertinoPageScaffold(
+      child: NestedScrollView(
+        headerSliverBuilder: ((context, innerBoxIsScrolled) {
+          return [
+            CupertinoSliverNavigationBar(
+              border: null,
+              leading: CupertinoButton(
+                onPressed: () {
+                  Navigator.canPop(context) ? Navigator.pop(context) : null;
+                },
+                padding: const EdgeInsets.all(0.0),
+                alignment: Alignment.centerLeft,
+                child: const Text('Cancel'),
+              ),
+              largeTitle: const Text('Scan QR Code'),
+              trailing: CupertinoButton(
+                onPressed: () {
+                  if (result == null) {
+                    return;
+                  }
+                  addAccount(context);
+                },
+                padding: const EdgeInsets.all(0.0),
+                alignment: Alignment.centerRight,
+                child: const Text('Save'),
+              ),
             ),
-            largeTitle: const Text('Scan QR Code'),
-            trailing: CupertinoButton(
-              onPressed: () {
-                if (result == null) {
-                  return;
-                }
-                addAccount(context);
-              },
-              padding: const EdgeInsets.all(0.0),
-              alignment: Alignment.centerRight,
-              child: const Text('Save'),
-            ),
-          ),
-        ];
-      }),
-      body: Column(
-        children: <Widget>[
-          SizedBox(
-            height: 400,
-            child: Stack(
-              children: <Widget>[
-                SizedBox(child: _buildQrView(context)),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 0.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        CupertinoButton(
-                          onPressed: () async {
-                            await controller?.toggleFlash();
-                            setState(() {
-                              flashState = !flashState;
-                            });
-                          },
-                          child: FutureBuilder(
-                            future: controller?.getFlashStatus(),
-                            builder: (context, snapshot) {
-                              return flashState
-                                  ? const Icon(
-                                      CupertinoIcons.lightbulb_fill,
-                                      color: CupertinoColors.white,
-                                    )
-                                  : const Icon(
-                                      CupertinoIcons.lightbulb_slash_fill,
-                                      color: CupertinoColors.white,
-                                    );
+          ];
+        }),
+        body: Column(
+          children: <Widget>[
+            SizedBox(
+              height: 400,
+              child: Stack(
+                children: <Widget>[
+                  SizedBox(child: _buildQrView(context)),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 0.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          CupertinoButton(
+                            onPressed: () async {
+                              await controller?.toggleFlash();
+                              setState(() {
+                                flashState = !flashState;
+                              });
                             },
+                            child: FutureBuilder(
+                              future: controller?.getFlashStatus(),
+                              builder: (context, snapshot) {
+                                return flashState
+                                    ? const Icon(
+                                        CupertinoIcons.lightbulb_fill,
+                                        color: CupertinoColors.white,
+                                      )
+                                    : const Icon(
+                                        CupertinoIcons.lightbulb_slash_fill,
+                                        color: CupertinoColors.white,
+                                      );
+                              },
+                            ),
                           ),
-                        ),
-                        CupertinoButton(
-                          onPressed: () async {
-                            await controller?.flipCamera();
-                            setState(() {
-                              backCam = !backCam;
-                            });
-                          },
-                          child: const Icon(
-                            CupertinoIcons.camera_rotate,
-                            color: CupertinoColors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              ],
-            ),
-            // child: _buildQrView(context),
-          ),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(12.0),
-              // margin: const EdgeInsets.only(bottom: 45.0),
-              color: CupertinoTheme.of(context).scaffoldBackgroundColor,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 10.0),
-                      padding: const EdgeInsets.all(10.0),
-                      decoration: BoxDecoration(
-                        color: CupertinoTheme.of(context).barBackgroundColor,
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(13.0)),
-                      ),
-                      child: Column(
-                        children: [
-                          // print(uriComponents.host);
-                          // print(uriComponents.hasQuery);
-                          // print(uriComponents.query);
-                          // print(uriComponents.queryParameters);
-                          // print(uriComponents.scheme);
-                          // print(uriComponents.pathSegments);
-                          Tile(
-                            content: serviceName,
-                            label: 'Service',
-                            leftImage: result != null && imageName != 'account'
-                                ? true
-                                : false,
-                            leftImgName: imageName,
-                            bottomBorder: true,
-                          ),
-                          Tile(
-                            content: result != null
-                                ? uri.pathSegments[0].toString()
-                                : '',
-                            label: 'Account',
-                            leftImage: false,
-                            leftImgName: '',
-                            bottomBorder: true,
-                          ),
-                          Tile(
-                            content: result != null
-                                ? uri.queryParameters['secret'].toString()
-                                : '',
-                            label: 'Secret',
-                            leftImage: false,
-                            leftImgName: '',
-                            bottomBorder: true,
+                          CupertinoButton(
+                            onPressed: () async {
+                              await controller?.flipCamera();
+                              setState(() {
+                                backCam = !backCam;
+                              });
+                            },
+                            child: const Icon(
+                              CupertinoIcons.camera_rotate,
+                              color: CupertinoColors.white,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const BottomButtons(),
+                  )
                 ],
               ),
+              // child: _buildQrView(context),
             ),
-          ),
-        ],
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12.0),
+                // margin: const EdgeInsets.only(bottom: 45.0),
+                color: CupertinoTheme.of(context).scaffoldBackgroundColor,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10.0),
+                        padding: const EdgeInsets.all(10.0),
+                        decoration: BoxDecoration(
+                          color: CupertinoTheme.of(context).barBackgroundColor,
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(13.0)),
+                        ),
+                        child: Column(
+                          children: [
+                            // print(uriComponents.host);
+                            // print(uriComponents.hasQuery);
+                            // print(uriComponents.query);
+                            // print(uriComponents.queryParameters);
+                            // print(uriComponents.scheme);
+                            // print(uriComponents.pathSegments);
+                            Tile(
+                              content: serviceName,
+                              label: 'Service',
+                              leftImage:
+                                  result != null && imageName != 'account'
+                                      ? true
+                                      : false,
+                              leftImgName: imageName,
+                              bottomBorder: true,
+                            ),
+                            Tile(
+                              content: result != null
+                                  ? uri.pathSegments[0].toString()
+                                  : '',
+                              label: 'Account',
+                              leftImage: false,
+                              leftImgName: '',
+                              bottomBorder: true,
+                            ),
+                            Tile(
+                              content: result != null
+                                  ? uri.queryParameters['secret'].toString()
+                                  : '',
+                              label: 'Secret',
+                              leftImage: false,
+                              leftImgName: '',
+                              bottomBorder: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const BottomButtons(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

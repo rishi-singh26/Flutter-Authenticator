@@ -1,4 +1,5 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
+import 'package:authenticator/pages/home/components/bottom_container.dart';
 import 'package:authenticator/pages/home/components/render_acc_locked.dart';
 import 'package:authenticator/pages/home/components/render_account.dart';
 import 'package:authenticator/pages/scanner/main.dart';
@@ -12,15 +13,9 @@ import 'package:crypton/crypton.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_redux/flutter_redux.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:redux/redux.dart';
-
-const double _kItemExtent = 32.0;
-const List<String> _sortingNames = <String>[
-  'Newest First',
-  'Oldest First',
-  'Service (A to Z)',
-  'Service (Z to A)',
-];
+import 'package:pull_down_button/pull_down_button.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key}) : super(key: key);
@@ -33,28 +28,29 @@ class _MyHomePageState extends State<MyHomePage> {
   List<TotpAccount> totpAccounts = [];
   final TextEditingController _searchController = TextEditingController();
 
-  int _selectedSorting = 0;
+  int _selectedSorting =
+      0; // 0 => Newest first, 1 => Oldest first, 2 => Alphabetical desc, 3 => Alphabetical asc
 
-  // This shows a CupertinoModalPopup with a reasonable fixed height which hosts CupertinoPicker.
-  void _showDialog(Widget child) {
-    showCupertinoModalPopup<void>(
+  _showAlertDilogue(String title, String message, Function onPress) {
+    showCupertinoDialog(
       context: context,
-      builder: (BuildContext context) => Container(
-        height: 216,
-        padding: const EdgeInsets.only(top: 6.0),
-        // The Bottom margin is provided to align the popup above the system navigation bar.
-        margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        // Provide a background color for the popup.
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        // Use a SafeArea widget to avoid system overlaps.
-        child: SafeArea(
-          top: false,
-          child: child,
-        ),
-      ),
-    ).then((value) => setState(() {}));
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+                onPress();
+              },
+              child: const Text('Ok'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   _attachOrDetackPVKey(
@@ -151,15 +147,37 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  String _getSortingKey(int selectedSorting) {
+    if (selectedSorting == 0 || selectedSorting == 1) {
+      return 'createdOn';
+    }
+    if (selectedSorting == 2 || selectedSorting == 3) {
+      return 'name';
+    }
+    return 'createdOn';
+  }
+
+  bool _getSortingOrder(int selectedSorting) {
+    if (selectedSorting == 0 || selectedSorting == 2) {
+      return true;
+    }
+    if (selectedSorting == 1 || selectedSorting == 3) {
+      return false;
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final String sortingKey = _getSortingKey(_selectedSorting);
+    final bool sortingOrder = _getSortingOrder(_selectedSorting);
     Stream<QuerySnapshot> accountsStream = FirebaseFirestore.instance
         .collection('newTotpAccounts')
         .where(
           'userId',
           isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '',
         )
-        .orderBy('createdOn', descending: true)
+        .orderBy(sortingKey, descending: sortingOrder)
         .snapshots();
 
     return CupertinoPageScaffold(
@@ -167,6 +185,8 @@ class _MyHomePageState extends State<MyHomePage> {
         headerSliverBuilder: ((context, innerBoxIsScrolled) {
           return [
             CupertinoSliverNavigationBar(
+              // backgroundColor:
+              //     CupertinoTheme.of(context).scaffoldBackgroundColor,
               border: null,
               leading: CupertinoButton(
                 onPressed: () => _showActions(context),
@@ -175,35 +195,45 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: const Icon(CupertinoIcons.settings, size: 23),
               ),
               largeTitle: const Text('Authenticator'),
-              trailing: StatefulBuilder(
-                builder: ((context, setState) {
-                  return CupertinoButton(
-                    onPressed: () => _showDialog(
-                      CupertinoPicker(
-                        magnification: 1.22,
-                        squeeze: 1.2,
-                        useMagnifier: true,
-                        itemExtent: _kItemExtent,
-                        onSelectedItemChanged: (int selectedItem) {
-                          setState(() {
-                            _selectedSorting = selectedItem;
-                          });
-                        },
-                        children: List<Widget>.generate(_sortingNames.length,
-                            (int index) {
-                          return Center(
-                            child: Text(
-                              _sortingNames[index],
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(0.0),
-                    alignment: Alignment.centerRight,
-                    child: const Icon(CupertinoIcons.ellipsis_circle, size: 23),
-                  );
-                }),
+              trailing: PullDownButton(
+                itemBuilder: (context) => [
+                  const PullDownMenuTitle(title: Text('Sorting Options')),
+                  SelectablePullDownMenuItem(
+                    title: 'Newest First',
+                    onTap: () => setState(() => _selectedSorting = 0),
+                    selected: _selectedSorting == 0,
+                    icon: CupertinoIcons.calendar_badge_minus,
+                  ),
+                  const PullDownMenuDivider(),
+                  SelectablePullDownMenuItem(
+                    title: 'Oldest First',
+                    onTap: () => setState(() => _selectedSorting = 1),
+                    selected: _selectedSorting == 1,
+                    icon: CupertinoIcons.calendar_badge_plus,
+                  ),
+                  const PullDownMenuDivider(),
+                  SelectablePullDownMenuItem(
+                    title: 'Service (A to Z)',
+                    selected: _selectedSorting == 3,
+                    onTap: () => setState(() => _selectedSorting = 3),
+                    icon: CupertinoIcons.text_badge_minus,
+                  ),
+                  const PullDownMenuDivider(),
+                  SelectablePullDownMenuItem(
+                    title: 'Service (Z to A)',
+                    selected: _selectedSorting == 2,
+                    onTap: () => setState(() => _selectedSorting = 2),
+                    icon: CupertinoIcons.text_badge_plus,
+                  ),
+                  // const PullDownMenuDivider.large(),
+                ],
+                position: PullDownMenuPosition.under,
+                buttonBuilder: (context, showMenu) => CupertinoButton(
+                  onPressed: showMenu,
+                  padding: const EdgeInsets.all(0.0),
+                  alignment: Alignment.centerRight,
+                  child: const Icon(CupertinoIcons.ellipsis_circle, size: 23),
+                ),
               ),
             ),
             SliverToBoxAdapter(
@@ -253,159 +283,50 @@ class _MyHomePageState extends State<MyHomePage> {
                   }).toList();
                   return StoreConnector<AppState, AppState>(
                     converter: (store) => store.state,
-                    builder: (context, state) => ListView.builder(
-                      padding: const EdgeInsets.only(top: 0),
-                      itemCount: accounts.length,
-                      itemBuilder: (context, index) {
-                        if (state.pvKey.isAttached) {
-                          TotpAccntCryptoResp decryptedData = accounts[index]
-                              .decrypt(RSAPrivateKey.fromPEM(state.pvKey.key));
-                          if (!decryptedData.status) {
-                            return RenderAccountLocked(
-                              accountData: accounts[index],
-                              onPressed: () => _showActions(context),
+                    builder: (context, state) => SlidableAutoCloseBehavior(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(top: 0),
+                        itemCount: accounts.length,
+                        itemBuilder: (context, index) {
+                          if (state.pvKey.isAttached) {
+                            TotpAccntCryptoResp decryptedData = accounts[index]
+                                .decrypt(
+                                    RSAPrivateKey.fromPEM(state.pvKey.key));
+                            if (!decryptedData.status) {
+                              return RenderAccountLocked(
+                                accountData: accounts[index],
+                                onPressed: () => _showAlertDilogue(
+                                  'Alert!',
+                                  'An error occured while decryption!',
+                                  () {},
+                                ),
+                                isTopElement: index == 0,
+                                isBottomElement: index == accounts.length - 1,
+                              );
+                            }
+                            return RenderAccount(
+                              accountData: decryptedData.data,
                               isTopElement: index == 0,
                               isBottomElement: index == accounts.length - 1,
                             );
                           }
-                          return RenderAccount(
-                            accountData: decryptedData.data,
+                          return RenderAccountLocked(
+                            accountData: accounts[index],
+                            onPressed: () => _showActions(context),
                             isTopElement: index == 0,
                             isBottomElement: index == accounts.length - 1,
                           );
-                        }
-                        return RenderAccountLocked(
-                          accountData: accounts[index],
-                          onPressed: () => _showActions(context),
-                          isTopElement: index == 0,
-                          isBottomElement: index == accounts.length - 1,
-                        );
-                      },
+                        },
+                      ),
                     ),
                   );
                 },
               ),
             ),
-            Container(
-              color: CupertinoTheme.of(context).barBackgroundColor,
-              alignment: Alignment.center,
-              width: double.infinity,
-              margin: const EdgeInsets.only(top: 10.0),
-              padding: const EdgeInsets.symmetric(
-                vertical: 10.0,
-                horizontal: 15.0,
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        CupertinoIcons.circle_fill,
-                        color: CupertinoColors.systemGreen,
-                        size: 10,
-                      ),
-                      const SizedBox(width: 4.0),
-                      Text(
-                        'Synchronised',
-                        style: TextStyle(
-                          color: CupertinoTheme.of(context)
-                              .textTheme
-                              .tabLabelTextStyle
-                              .color,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: _navigateToScanner,
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: CupertinoTheme.of(context).primaryColor,
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(15.0),
-                          ),
-                        ),
-                        child: const Icon(
-                          CupertinoIcons.add,
-                          color: CupertinoColors.white,
-                          size: 20.0,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            BottomContainer(onPress: _navigateToScanner),
           ],
         ),
       ),
     );
   }
 }
-
-// Container(
-//   color: CupertinoTheme.of(context).barBackgroundColor,
-//   alignment: Alignment.center,
-//   width: double.infinity,
-//   margin: const EdgeInsets.only(top: 10.0),
-//   padding: const EdgeInsets.symmetric(
-//     vertical: 15.0,
-//     horizontal: 15.0,
-//   ),
-//   child: Stack(
-//     alignment: Alignment.center,
-//     children: [
-//       Row(
-//         mainAxisAlignment: MainAxisAlignment.center,
-//         children: [
-//           const Icon(
-//             CupertinoIcons.circle_fill,
-//             color: CupertinoColors.systemGreen,
-//             size: 10,
-//           ),
-//           const SizedBox(width: 4.0),
-//           Text(
-//             'Synchronised',
-//             style: TextStyle(
-//               color: CupertinoTheme.of(context)
-//                   .textTheme
-//                   .tabLabelTextStyle
-//                   .color,
-//               fontSize: 14,
-//             ),
-//           ),
-//         ],
-//       ),
-//       Align(
-//         alignment: Alignment.centerRight,
-//         child: GestureDetector(
-//           onTap: _showActionSheet,
-//           child: Container(
-//             width: 30,
-//             height: 30,
-//             alignment: Alignment.center,
-//             decoration: BoxDecoration(
-//               color: CupertinoTheme.of(context).primaryColor,
-//               borderRadius: const BorderRadius.all(
-//                 Radius.circular(15.0),
-//               ),
-//             ),
-//             child: const Icon(
-//               CupertinoIcons.add,
-//               color: CupertinoColors.white,
-//               size: 20.0,
-//             ),
-//           ),
-//         ),
-//       ),
-//     ],
-//   ),
-// ),
