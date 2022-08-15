@@ -1,4 +1,5 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
+import 'package:authenticator/pages/scanner/components/bottom_buttons.dart';
 import 'package:authenticator/redux/combined_store.dart';
 import 'package:authenticator/redux/store/app.state.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -165,75 +166,82 @@ class _EnterUrlState extends State<EnterUrl> {
             ),
           ];
         }),
-        body: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10.0),
-                margin: const EdgeInsets.all(15.0),
-                decoration: BoxDecoration(
-                  color: CupertinoTheme.of(context).barBackgroundColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(9)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 6.0, top: 4.0),
-                      child: Text(
-                        'URL',
-                        style: CupertinoTheme.of(context).textTheme.textStyle,
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10.0),
+                    margin: const EdgeInsets.all(15.0),
+                    decoration: BoxDecoration(
+                      color: CupertinoTheme.of(context).barBackgroundColor,
+                      borderRadius: const BorderRadius.all(Radius.circular(9)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6.0, top: 4.0),
+                          child: Text(
+                            'URL',
+                            style:
+                                CupertinoTheme.of(context).textTheme.textStyle,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: CupertinoTextField(
+                            controller: urlController,
+                            placeholder: 'ex.: otpauth://',
+                            decoration: const BoxDecoration(
+                              border: null,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Text(
+                      'You can save your Two-Factor Authentication (2FA) codes by entering the full URL. Please note, the URL should start with otpauth://. This feature can be very usefull if you want to transfer your Two-Factor Authentication codes from the password manager.',
+                      style: TextStyle(
+                        color: CupertinoTheme.of(context)
+                            .textTheme
+                            .tabLabelTextStyle
+                            .color,
+                        fontSize: 13,
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: CupertinoTextField(
-                        controller: urlController,
-                        placeholder: 'ex.: otpauth://',
-                        decoration: const BoxDecoration(
-                          border: null,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(30.0),
+                    child: CupertinoButton.filled(
+                      child: const Text(
+                        'Continue',
+                        style: TextStyle(
+                          color: CupertinoColors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Text(
-                  'You can save your Two-Factor Authentication (2FA) codes by entering the full URL. Please note, the URL should start with otpauth://. This feature can be very usefull if you want to transfer your Two-Factor Authentication codes from the password manager.',
-                  style: TextStyle(
-                    color: CupertinoTheme.of(context)
-                        .textTheme
-                        .tabLabelTextStyle
-                        .color,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(30.0),
-                child: CupertinoButton.filled(
-                  child: Text(
-                    'Continue',
-                    style: TextStyle(
-                      color:
-                          CupertinoTheme.of(context).textTheme.textStyle.color,
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
+                      onPressed: () {
+                        if (urlController.text.isEmpty) {
+                          return;
+                        }
+                        _onSubmit(context);
+                      },
                     ),
                   ),
-                  onPressed: () {
-                    if (urlController.text.isEmpty) {
-                      return;
-                    }
-                    _onSubmit(context);
-                  },
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(12.0),
+              child: BottomButtons(currentPage: 2),
+            ),
+          ],
         ),
       ),
     );

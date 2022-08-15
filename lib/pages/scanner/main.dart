@@ -2,9 +2,9 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:authenticator/modals/totp_acc_modal.dart';
 import 'package:authenticator/pages/scanner/components/bottom_buttons.dart';
+import 'package:authenticator/pages/scanner/components/select_accounts.dart';
 import 'package:authenticator/redux/combined_store.dart';
 import 'package:authenticator/redux/store/app.state.dart';
-import 'package:authenticator/shared/functions/main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypton/crypton.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,8 +20,6 @@ class Scanner extends StatefulWidget {
 }
 
 class _ScannerState extends State<Scanner> {
-  Barcode? result;
-  Uri uri = Uri.parse('https://www.google.com');
   QRViewController? controller;
   bool flashState = false;
   bool backCam = true;
@@ -43,7 +41,7 @@ class _ScannerState extends State<Scanner> {
         : 300.0;
     return QRView(
       key: qrKey,
-      onQRViewCreated: _onQRViewCreated,
+      onQRViewCreated: (controller) => _onQRViewCreated(controller, context),
       overlay: QrScannerOverlayShape(
         borderColor: CupertinoTheme.of(context).primaryColor,
         borderRadius: 10,
@@ -55,20 +53,44 @@ class _ScannerState extends State<Scanner> {
     );
   }
 
-  void _onQRViewCreated(QRViewController controller) {
+  void _onQRViewCreated(QRViewController controller, BuildContext context) {
     setState(() {
       this.controller = controller;
     });
     controller.resumeCamera();
     controller.scannedDataStream.listen((scanData) {
       try {
-        final Uri uriComponents = Uri.parse(scanData.code ?? '');
+        final String scanResult = scanData.code ?? '';
+        final Uri uriComponents = Uri.parse(scanResult);
         if (uriComponents.isScheme('otpauth')) {
           controller.pauseCamera();
-          setState(() {
-            result = scanData;
-            uri = uriComponents;
-          });
+          String issuer = uriComponents.queryParameters.containsKey('issuer')
+              ? uriComponents.queryParameters['issuer'].toString()
+              : '';
+          _showDilogue(
+            context,
+            'Account detected!',
+            "Do you want to add \"${issuer.isEmpty ? 'this account' : issuer}\"?",
+            () {
+              addAccount(context, scanResult, uriComponents);
+            },
+          );
+        }
+        if (uriComponents.isScheme('otpauth-migration')) {
+          controller.pauseCamera();
+          _showDilogue(
+            context,
+            'Multiple accounts detected!',
+            "Do you want to continue?",
+            () {
+              Navigator.of(context).pushReplacement(
+                CupertinoPageRoute(
+                  fullscreenDialog: true,
+                  builder: (context) => SelectAccounts(scanResult: scanResult),
+                ),
+              );
+            },
+          );
         }
       } catch (e) {
         return;
@@ -90,23 +112,19 @@ class _ScannerState extends State<Scanner> {
     }
   }
 
-  Future<bool> addAccount(BuildContext context) async {
+  Future<bool> addAccount(BuildContext context, String result, Uri uri) async {
     try {
       Store<AppState> store = await AppStore.getAppStore();
 
-      String issuer = result != null
-          ? uri.queryParameters.containsKey('issuer')
-              ? uri.queryParameters['issuer'].toString()
-              : ''
+      String issuer = uri.queryParameters.containsKey('issuer')
+          ? uri.queryParameters['issuer'].toString()
           : '';
       String host = uri.host;
       String name =
           uri.pathSegments.isNotEmpty ? uri.pathSegments[0].toString() : '';
       String protocol = uri.scheme;
-      String secret = result != null
-          ? uri.queryParameters.containsKey('secret')
-              ? uri.queryParameters['secret'].toString()
-              : ''
+      String secret = uri.queryParameters.containsKey('secret')
+          ? uri.queryParameters['secret'].toString()
           : '';
       String algorithm = uri.queryParameters.containsKey('algorithm')
           ? uri.queryParameters['algorithm'].toString()
@@ -128,7 +146,7 @@ class _ScannerState extends State<Scanner> {
           protocol: protocol,
           secret: secret,
           tags: [],
-          url: result?.code ?? '',
+          url: result,
         ),
         id: 'id',
         name: issuer.toUpperCase(),
@@ -159,6 +177,42 @@ class _ScannerState extends State<Scanner> {
     }
   }
 
+  _showDilogue(
+      BuildContext topContext, String title, String content, Function onPress) {
+    showCupertinoDialog(
+      context: topContext,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: Text(
+            title,
+            style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+          ),
+          content: Text(
+            content,
+            style: CupertinoTheme.of(context).textTheme.textStyle,
+          ),
+          actions: [
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                controller?.resumeCamera();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onPress();
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     controller?.dispose();
@@ -167,12 +221,6 @@ class _ScannerState extends State<Scanner> {
 
   @override
   Widget build(BuildContext context) {
-    String imageName = getImageName(uri.queryParameters['issuer'].toString());
-    String serviceName = result != null
-        ? uri.queryParameters.containsKey('issuer')
-            ? uri.queryParameters['issuer'].toString()
-            : ''
-        : '';
     return CupertinoPageScaffold(
       child: NestedScrollView(
         headerSliverBuilder: ((context, innerBoxIsScrolled) {
@@ -188,138 +236,88 @@ class _ScannerState extends State<Scanner> {
                 child: const Text('Cancel'),
               ),
               largeTitle: const Text('Scan QR Code'),
-              trailing: CupertinoButton(
-                onPressed: () {
-                  if (result == null) {
-                    return;
-                  }
-                  addAccount(context);
-                },
-                padding: const EdgeInsets.all(0.0),
-                alignment: Alignment.centerRight,
-                child: const Text('Save'),
-              ),
             ),
           ];
         }),
         body: Column(
-          children: <Widget>[
-            SizedBox(
-              height: 400,
-              child: Stack(
+          children: [
+            Expanded(
+              child: ListView(
                 children: <Widget>[
-                  SizedBox(child: _buildQrView(context)),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 0.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-                          CupertinoButton(
-                            onPressed: () async {
-                              await controller?.toggleFlash();
-                              setState(() {
-                                flashState = !flashState;
-                              });
-                            },
-                            child: FutureBuilder(
-                              future: controller?.getFlashStatus(),
-                              builder: (context, snapshot) {
-                                return flashState
-                                    ? const Icon(
-                                        CupertinoIcons.lightbulb_fill,
-                                        color: CupertinoColors.white,
-                                      )
-                                    : const Icon(
-                                        CupertinoIcons.lightbulb_slash_fill,
-                                        color: CupertinoColors.white,
-                                      );
-                              },
-                            ),
-                          ),
-                          CupertinoButton(
-                            onPressed: () async {
-                              await controller?.flipCamera();
-                              setState(() {
-                                backCam = !backCam;
-                              });
-                            },
-                            child: const Icon(
-                              CupertinoIcons.camera_rotate,
-                              color: CupertinoColors.white,
-                            ),
-                          ),
-                        ],
-                      ),
+                  SizedBox(
+                    height: 400,
+                    child: Stack(
+                      children: <Widget>[
+                        SizedBox(child: _buildQrView(context)),
+                        ScannerButtons(
+                          flashState: flashState,
+                          onCamPress: () async {
+                            await controller?.flipCamera();
+                            setState(() {
+                              backCam = !backCam;
+                            });
+                          },
+                          onFlashPress: () async {
+                            await controller?.toggleFlash();
+                            setState(() {
+                              flashState = !flashState;
+                            });
+                          },
+                        ),
+                      ],
                     ),
-                  )
+                    // child: _buildQrView(context),
+                  ),
+                  const BottomSection(),
                 ],
               ),
-              // child: _buildQrView(context),
             ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(12.0),
-                // margin: const EdgeInsets.only(bottom: 45.0),
-                color: CupertinoTheme.of(context).scaffoldBackgroundColor,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 10.0),
-                        padding: const EdgeInsets.all(10.0),
-                        decoration: BoxDecoration(
-                          color: CupertinoTheme.of(context).barBackgroundColor,
-                          borderRadius:
-                              const BorderRadius.all(Radius.circular(13.0)),
-                        ),
-                        child: Column(
-                          children: [
-                            // print(uriComponents.host);
-                            // print(uriComponents.hasQuery);
-                            // print(uriComponents.query);
-                            // print(uriComponents.queryParameters);
-                            // print(uriComponents.scheme);
-                            // print(uriComponents.pathSegments);
-                            Tile(
-                              content: serviceName,
-                              label: 'Service',
-                              leftImage:
-                                  result != null && imageName != 'account'
-                                      ? true
-                                      : false,
-                              leftImgName: imageName,
-                              bottomBorder: true,
-                            ),
-                            Tile(
-                              content: result != null
-                                  ? uri.pathSegments[0].toString()
-                                  : '',
-                              label: 'Account',
-                              leftImage: false,
-                              leftImgName: '',
-                              bottomBorder: true,
-                            ),
-                            Tile(
-                              content: result != null
-                                  ? uri.queryParameters['secret'].toString()
-                                  : '',
-                              label: 'Secret',
-                              leftImage: false,
-                              leftImgName: '',
-                              bottomBorder: true,
-                            ),
-                          ],
-                        ),
-                      ),
+            const BottomButtons(currentPage: 0),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ScannerButtons extends StatelessWidget {
+  final bool flashState;
+  final Function() onFlashPress;
+  final Function() onCamPress;
+  const ScannerButtons({
+    Key? key,
+    required this.flashState,
+    required this.onCamPress,
+    required this.onFlashPress,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 0.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            CupertinoButton(
+              onPressed: onFlashPress,
+              child: flashState
+                  ? const Icon(
+                      CupertinoIcons.lightbulb_fill,
+                      color: CupertinoColors.white,
+                    )
+                  : const Icon(
+                      CupertinoIcons.lightbulb_slash_fill,
+                      color: CupertinoColors.white,
                     ),
-                    const BottomButtons(),
-                  ],
-                ),
+            ),
+            CupertinoButton(
+              onPressed: onCamPress,
+              child: const Icon(
+                CupertinoIcons.camera_rotate,
+                color: CupertinoColors.white,
               ),
             ),
           ],
@@ -329,83 +327,39 @@ class _ScannerState extends State<Scanner> {
   }
 }
 
-class Tile extends StatelessWidget {
-  final String label;
-  final String content;
-  final bool leftImage;
-  final String leftImgName;
-  final bool bottomBorder;
-
-  const Tile({
-    Key? key,
-    required this.content,
-    required this.label,
-    required this.leftImage,
-    required this.leftImgName,
-    required this.bottomBorder,
-  }) : super(key: key);
+class BottomSection extends StatelessWidget {
+  const BottomSection({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(top: 9.0, bottom: 12.0, left: 7.0),
-      decoration: BoxDecoration(
-        border: bottomBorder
-            ? Border(
-                bottom: BorderSide(
-                  color: CupertinoTheme.of(context)
-                          .textTheme
-                          .tabLabelTextStyle
-                          .color ??
-                      CupertinoColors.opaqueSeparator,
-                  width: 0.1,
-                ),
-              )
-            : null,
-      ),
-      child: Row(
-        children: [
-          leftImage
-              ? Padding(
-                  padding: const EdgeInsets.only(right: 10.0),
-                  child: leftImgName == 'account'
-                      ? const Icon(
-                          CupertinoIcons.person_crop_circle,
-                          size: 45,
-                          color: CupertinoColors.secondaryLabel,
-                        )
-                      : Image.asset(leftImgName, height: 40, width: 40),
-                )
-              : const SizedBox(),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: CupertinoTheme.of(context)
-                      .textTheme
-                      .tabLabelTextStyle
-                      .color,
-                  fontSize: 14,
-                ),
-              ),
-              SizedBox(
-                width: 310.0,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 5.0),
-                  child: Text(
-                    content,
-                    style: CupertinoTheme.of(context).textTheme.pickerTextStyle,
-                    overflow: TextOverflow.fade,
-                    softWrap: false,
-                    maxLines: 1,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+      padding: const EdgeInsets.all(12.0),
+      color: CupertinoTheme.of(context).scaffoldBackgroundColor,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10.0),
+        padding: const EdgeInsets.all(10.0),
+        decoration: BoxDecoration(
+          color: CupertinoTheme.of(context).barBackgroundColor,
+          borderRadius: const BorderRadius.all(Radius.circular(13.0)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Drag Authenticator App over your QR Code',
+              style: CupertinoTheme.of(context).textTheme.textStyle,
+            ),
+            const SizedBox(height: 35.0),
+            Text(
+              'You dont know where to find the 2FA QR Code?',
+              style: CupertinoTheme.of(context).textTheme.textStyle,
+            ),
+            CupertinoButton(
+              child: const Text('Check 2FA Guides'),
+              onPressed: () {},
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
+import 'package:authenticator/pages/scanner/components/bottom_buttons.dart';
 import 'package:authenticator/redux/combined_store.dart';
 import 'package:authenticator/redux/store/app.state.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -218,389 +219,413 @@ class _EnterManuallyState extends State<EnterManually> {
             ),
           ];
         }),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15.0),
-          child: ListView(
-            padding: const EdgeInsets.only(top: 0),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 7.0,
-                  top: 25.0,
-                  left: 7.0,
-                ),
-                child: Text(
-                  'BASE OPTIONS',
-                  style: TextStyle(
-                    color: CupertinoTheme.of(context)
-                        .textTheme
-                        .tabLabelTextStyle
-                        .color,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.only(
-                  left: 12.0,
-                  top: 8.0,
-                  bottom: 8.0,
-                ),
-                decoration: BoxDecoration(
-                  color: CupertinoTheme.of(context).barBackgroundColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(13.0)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Tile(
-                      label: 'Service',
-                      leftImage: false,
-                      leftImgName: 'account',
-                      bottomBorder: true,
-                      txtController: serviceNameController,
-                      placeholder: 'ex.: Wikipedia',
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 7.0,
+                      top: 25.0,
+                      left: 7.0,
                     ),
-                    Tile(
-                      label: 'Account',
-                      leftImage: false,
-                      leftImgName: '',
-                      bottomBorder: true,
-                      txtController: accountNameController,
-                      placeholder: 'ex.: user@example.com',
+                    child: Text(
+                      'BASE OPTIONS',
+                      style: TextStyle(
+                        color: CupertinoTheme.of(context)
+                            .textTheme
+                            .tabLabelTextStyle
+                            .color,
+                        fontSize: 14,
+                      ),
                     ),
-                    Tile(
-                      label: 'Key',
-                      leftImage: false,
-                      leftImgName: '',
-                      bottomBorder: false,
-                      txtController: keyController,
-                      placeholder: 'ex.: JSDF33RFSFR389',
+                  ),
+                  Container(
+                    padding: const EdgeInsets.only(
+                      left: 12.0,
+                      top: 8.0,
+                      bottom: 8.0,
                     ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 7.0,
-                  top: 25.0,
-                  left: 7.0,
-                ),
-                child: Text(
-                  'BACKUP CODES (OPTIONAL)',
-                  style: TextStyle(
-                    color: CupertinoTheme.of(context)
-                        .textTheme
-                        .tabLabelTextStyle
-                        .color,
-                    fontSize: 14,
+                    decoration: BoxDecoration(
+                      color: CupertinoTheme.of(context).barBackgroundColor,
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(13.0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Tile(
+                          label: 'Service',
+                          leftImage: false,
+                          leftImgName: 'account',
+                          bottomBorder: true,
+                          txtController: serviceNameController,
+                          placeholder: 'ex.: Wikipedia',
+                        ),
+                        Tile(
+                          label: 'Account',
+                          leftImage: false,
+                          leftImgName: '',
+                          bottomBorder: true,
+                          txtController: accountNameController,
+                          placeholder: 'ex.: user@example.com',
+                        ),
+                        Tile(
+                          label: 'Key',
+                          leftImage: false,
+                          leftImgName: '',
+                          bottomBorder: false,
+                          txtController: keyController,
+                          placeholder: 'ex.: JSDF33RFSFR389',
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(15.0),
-                decoration: BoxDecoration(
-                  color: CupertinoTheme.of(context).barBackgroundColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(13.0)),
-                ),
-                child: CupertinoTextField(
-                  placeholder:
-                      'ex.:\n1) 5500 0251\n2)0021 5987\n3)4207 9510\n4)...',
-                  padding: const EdgeInsets.only(bottom: 2),
-                  decoration: BoxDecoration(
-                    color: CupertinoTheme.of(context).barBackgroundColor,
-                    border: null,
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 7.0,
+                      top: 25.0,
+                      left: 7.0,
+                    ),
+                    child: Text(
+                      'BACKUP CODES (OPTIONAL)',
+                      style: TextStyle(
+                        color: CupertinoTheme.of(context)
+                            .textTheme
+                            .tabLabelTextStyle
+                            .color,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
-                  controller: backupCodesController,
-                  style: CupertinoTheme.of(context).textTheme.textStyle,
-                  maxLines: 5,
-                ),
-              ),
-              Container(
-                margin: const EdgeInsets.only(top: 30.0),
-                padding: const EdgeInsets.only(left: 18.0, top: 10.0),
-                decoration: BoxDecoration(
-                  color: CupertinoTheme.of(context).barBackgroundColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(13.0)),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.only(right: 10.0, bottom: 10.0),
+                  Container(
+                    padding: const EdgeInsets.all(15.0),
+                    decoration: BoxDecoration(
+                      color: CupertinoTheme.of(context).barBackgroundColor,
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(13.0)),
+                    ),
+                    child: CupertinoTextField(
+                      placeholder:
+                          'ex.:\n1) 5500 0251\n2)0021 5987\n3)4207 9510\n4)...',
+                      padding: const EdgeInsets.only(bottom: 2),
                       decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: CupertinoTheme.of(context)
+                        color: CupertinoTheme.of(context).barBackgroundColor,
+                        border: null,
+                      ),
+                      controller: backupCodesController,
+                      style: CupertinoTheme.of(context).textTheme.textStyle,
+                      maxLines: 5,
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(top: 30.0),
+                    padding: const EdgeInsets.only(left: 18.0, top: 10.0),
+                    decoration: BoxDecoration(
+                      color: CupertinoTheme.of(context).barBackgroundColor,
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(13.0)),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding:
+                              const EdgeInsets.only(right: 10.0, bottom: 10.0),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: CupertinoTheme.of(context)
+                                        .textTheme
+                                        .tabLabelTextStyle
+                                        .color ??
+                                    CupertinoColors.opaqueSeparator,
+                                width: 0.1,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Advanced Options',
+                                style: CupertinoTheme.of(context)
                                     .textTheme
-                                    .tabLabelTextStyle
-                                    .color ??
-                                CupertinoColors.opaqueSeparator,
-                            width: 0.1,
+                                    .pickerTextStyle,
+                              ),
+                              CupertinoSwitch(
+                                value: _advancedOptionsOn,
+                                onChanged: (bool value) {
+                                  setState(() {
+                                    _advancedOptionsOn ? resetOptions() : null;
+                                    _advancedOptionsOn = !_advancedOptionsOn;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Advanced Options',
-                            style: CupertinoTheme.of(context)
-                                .textTheme
-                                .pickerTextStyle,
+                        Container(
+                          padding: const EdgeInsets.only(
+                            right: 10.0,
+                            bottom: 15.0,
+                            top: 15.0,
                           ),
-                          CupertinoSwitch(
-                            value: _advancedOptionsOn,
-                            onChanged: (bool value) {
-                              setState(() {
-                                _advancedOptionsOn ? resetOptions() : null;
-                                _advancedOptionsOn = !_advancedOptionsOn;
-                              });
-                            },
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: CupertinoTheme.of(context)
+                                        .textTheme
+                                        .tabLabelTextStyle
+                                        .color ??
+                                    CupertinoColors.opaqueSeparator,
+                                width: 0.1,
+                              ),
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.only(
-                        right: 10.0,
-                        bottom: 15.0,
-                        top: 15.0,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: CupertinoTheme.of(context)
-                                    .textTheme
-                                    .tabLabelTextStyle
-                                    .color ??
-                                CupertinoColors.opaqueSeparator,
-                            width: 0.1,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 10.0),
+                                child: Text(
+                                  'Algorithm',
+                                  style: CupertinoTheme.of(context)
+                                      .textTheme
+                                      .pickerTextStyle,
+                                ),
+                              ),
+                              Expanded(
+                                child: CupertinoSlidingSegmentedControl(
+                                  backgroundColor: CupertinoColors.systemGrey2,
+                                  thumbColor: CupertinoTheme.of(context)
+                                          .textTheme
+                                          .tabLabelTextStyle
+                                          .color ??
+                                      CupertinoColors.white,
+                                  // This represents the currently selected segmented control.
+                                  groupValue: _selectedAlgorithm,
+                                  // Callback that sets the selected segmented control.
+                                  onValueChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _selectedAlgorithm = value;
+                                        _advancedOptionsOn = true;
+                                      });
+                                    }
+                                  },
+                                  children: const {
+                                    'SHA1': Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 10),
+                                      child: Text(
+                                        'SHA1',
+                                        style: TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 14.0,
+                                        ),
+                                      ),
+                                    ),
+                                    'SHA256': Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 10),
+                                      child: Text(
+                                        'SHA256',
+                                        style: TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 14.0,
+                                        ),
+                                      ),
+                                    ),
+                                    'SHA512': Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 10),
+                                      child: Text(
+                                        'SHA512',
+                                        style: TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 14.0,
+                                        ),
+                                      ),
+                                    ),
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10.0),
-                            child: Text(
-                              'Algorithm',
-                              style: CupertinoTheme.of(context)
-                                  .textTheme
-                                  .pickerTextStyle,
+                        Container(
+                          padding: const EdgeInsets.only(
+                            right: 10.0,
+                            bottom: 15.0,
+                            top: 15.0,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: CupertinoTheme.of(context)
+                                        .textTheme
+                                        .tabLabelTextStyle
+                                        .color ??
+                                    CupertinoColors.opaqueSeparator,
+                                width: 0.1,
+                              ),
                             ),
                           ),
-                          Expanded(
-                            child: CupertinoSlidingSegmentedControl(
-                              backgroundColor: CupertinoColors.systemGrey2,
-                              thumbColor: CupertinoTheme.of(context)
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 10.0),
+                                child: Text(
+                                  'Digits',
+                                  style: CupertinoTheme.of(context)
                                       .textTheme
-                                      .tabLabelTextStyle
-                                      .color ??
-                                  CupertinoColors.white,
-                              // This represents the currently selected segmented control.
-                              groupValue: _selectedAlgorithm,
-                              // Callback that sets the selected segmented control.
-                              onValueChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _selectedAlgorithm = value;
-                                    _advancedOptionsOn = true;
-                                  });
-                                }
-                              },
-                              children: const {
-                                'SHA1': Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    'SHA1',
-                                    style: TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 14.0,
-                                    ),
-                                  ),
+                                      .pickerTextStyle,
                                 ),
-                                'SHA256': Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    'SHA256',
-                                    style: TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 14.0,
+                              ),
+                              Expanded(
+                                child: CupertinoSlidingSegmentedControl(
+                                  backgroundColor: CupertinoColors.systemGrey2,
+                                  thumbColor: CupertinoTheme.of(context)
+                                          .textTheme
+                                          .tabLabelTextStyle
+                                          .color ??
+                                      CupertinoColors.white,
+                                  // This represents the currently selected segmented control.
+                                  groupValue: _selectedDigitsCount,
+                                  // Callback that sets the selected segmented control.
+                                  onValueChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _selectedDigitsCount = value;
+                                        _advancedOptionsOn = true;
+                                      });
+                                    }
+                                  },
+                                  children: const {
+                                    '6': Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 30),
+                                      child: Text(
+                                        '6',
+                                        style: TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 14.0,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                                'SHA512': Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    'SHA512',
-                                    style: TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 14.0,
+                                    '8': Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 30),
+                                      child: Text(
+                                        '8',
+                                        style: TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 14.0,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  },
                                 ),
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.only(
-                        right: 10.0,
-                        bottom: 15.0,
-                        top: 15.0,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: CupertinoTheme.of(context)
-                                    .textTheme
-                                    .tabLabelTextStyle
-                                    .color ??
-                                CupertinoColors.opaqueSeparator,
-                            width: 0.1,
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10.0),
-                            child: Text(
-                              'Digits',
-                              style: CupertinoTheme.of(context)
-                                  .textTheme
-                                  .pickerTextStyle,
-                            ),
+                        Container(
+                          padding: const EdgeInsets.only(
+                            right: 10.0,
+                            bottom: 15.0,
+                            top: 15.0,
                           ),
-                          Expanded(
-                            child: CupertinoSlidingSegmentedControl(
-                              backgroundColor: CupertinoColors.systemGrey2,
-                              thumbColor: CupertinoTheme.of(context)
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 10.0),
+                                child: Text(
+                                  'Interval (Sec.)',
+                                  style: CupertinoTheme.of(context)
                                       .textTheme
-                                      .tabLabelTextStyle
-                                      .color ??
-                                  CupertinoColors.white,
-                              // This represents the currently selected segmented control.
-                              groupValue: _selectedDigitsCount,
-                              // Callback that sets the selected segmented control.
-                              onValueChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _selectedDigitsCount = value;
-                                    _advancedOptionsOn = true;
-                                  });
-                                }
-                              },
-                              children: const {
-                                '6': Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 30),
-                                  child: Text(
-                                    '6',
-                                    style: TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 14.0,
-                                    ),
-                                  ),
+                                      .pickerTextStyle,
                                 ),
-                                '8': Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 30),
-                                  child: Text(
-                                    '8',
-                                    style: TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 14.0,
+                              ),
+                              Expanded(
+                                child: CupertinoSlidingSegmentedControl(
+                                  backgroundColor: CupertinoColors.systemGrey2,
+                                  thumbColor: CupertinoTheme.of(context)
+                                          .textTheme
+                                          .tabLabelTextStyle
+                                          .color ??
+                                      CupertinoColors.white,
+                                  // This represents the currently selected segmented control.
+                                  groupValue: _selectedInterval,
+                                  // Callback that sets the selected segmented control.
+                                  onValueChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _selectedInterval = value;
+                                        _advancedOptionsOn = true;
+                                      });
+                                    }
+                                  },
+                                  children: const {
+                                    '30': Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 10),
+                                      child: Text(
+                                        '30',
+                                        style: TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 14.0,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    '60': Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 10),
+                                      child: Text(
+                                        '60',
+                                        style: TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 14.0,
+                                        ),
+                                      ),
+                                    ),
+                                    '90': Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 10),
+                                      child: Text(
+                                        '90',
+                                        style: TextStyle(
+                                          color: CupertinoColors.white,
+                                          fontSize: 14.0,
+                                        ),
+                                      ),
+                                    ),
+                                  },
                                 ),
-                              },
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.only(
-                        right: 10.0,
-                        bottom: 15.0,
-                        top: 15.0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10.0),
-                            child: Text(
-                              'Interval (Sec.)',
-                              style: CupertinoTheme.of(context)
-                                  .textTheme
-                                  .pickerTextStyle,
-                            ),
-                          ),
-                          Expanded(
-                            child: CupertinoSlidingSegmentedControl(
-                              backgroundColor: CupertinoColors.systemGrey2,
-                              thumbColor: CupertinoTheme.of(context)
-                                      .textTheme
-                                      .tabLabelTextStyle
-                                      .color ??
-                                  CupertinoColors.white,
-                              // This represents the currently selected segmented control.
-                              groupValue: _selectedInterval,
-                              // Callback that sets the selected segmented control.
-                              onValueChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _selectedInterval = value;
-                                    _advancedOptionsOn = true;
-                                  });
-                                }
-                              },
-                              children: const {
-                                '30': Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    '30',
-                                    style: TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 14.0,
-                                    ),
-                                  ),
-                                ),
-                                '60': Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    '60',
-                                    style: TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 14.0,
-                                    ),
-                                  ),
-                                ),
-                                '90': Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 10),
-                                  child: Text(
-                                    '90',
-                                    style: TextStyle(
-                                      color: CupertinoColors.white,
-                                      fontSize: 14.0,
-                                    ),
-                                  ),
-                                ),
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
+                  )
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(
+                left: 12.0,
+                right: 12.0,
+                bottom: 12.0,
+                top: 5.0,
+              ),
+              child: BottomButtons(currentPage: 1),
+            ),
+          ],
         ),
       ),
     );

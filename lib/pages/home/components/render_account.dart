@@ -57,7 +57,6 @@ class _RenderAccountState extends State<RenderAccount>
           remainingTime: otp.OTP.remainingSeconds() + 2,
         );
       });
-      print(e);
     }
   }
 
@@ -249,7 +248,7 @@ class _RenderAccountState extends State<RenderAccount>
                               .textTheme
                               .textStyle
                               .copyWith(
-                                fontSize: 20,
+                                fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 2.0,
                               ),

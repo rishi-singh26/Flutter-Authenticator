@@ -1,16 +1,34 @@
 import 'package:authenticator/pages/scanner/components/enter_manually.dart';
 import 'package:authenticator/pages/scanner/components/enter_url.dart';
+import 'package:authenticator/pages/scanner/components/from_files.dart';
 import 'package:authenticator/pages/scanner/components/from_google_auth.dart';
+import 'package:authenticator/pages/scanner/main.dart';
 import 'package:flutter/cupertino.dart';
 
 class BottomButtons extends StatelessWidget {
-  const BottomButtons({Key? key}) : super(key: key);
+  final int currentPage;
+  const BottomButtons({Key? key, required this.currentPage}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        CustomBtn(
+          icon: CupertinoIcons.qrcode_viewfinder,
+          title: 'Scan QR',
+          onPress: () {
+            Navigator.pushReplacement(
+              context,
+              CupertinoPageRoute<Widget>(
+                fullscreenDialog: true,
+                builder: (BuildContext context) {
+                  return const Scanner();
+                },
+              ),
+            );
+          },
+        ),
         CustomBtn(
           icon: CupertinoIcons.pencil_circle,
           title: 'Manually',
@@ -65,7 +83,7 @@ class BottomButtons extends StatelessWidget {
               CupertinoPageRoute<Widget>(
                 fullscreenDialog: true,
                 builder: (BuildContext context) {
-                  return const FromGoogleAuth();
+                  return const FromFiles();
                 },
               ),
             );

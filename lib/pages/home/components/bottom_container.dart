@@ -44,19 +44,21 @@ class BottomContainer extends StatelessWidget {
             child: GestureDetector(
               onTap: onPress,
               child: Container(
-                width: 30,
-                height: 30,
+                width: 35,
+                height: 35,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: CupertinoTheme.of(context).primaryColor,
                   borderRadius: const BorderRadius.all(
-                    Radius.circular(15.0),
+                    Radius.circular(20.0),
                   ),
                 ),
-                child: const Icon(
-                  CupertinoIcons.add,
-                  color: CupertinoColors.white,
-                  size: 20.0,
+                child: const Center(
+                  child: Icon(
+                    CupertinoIcons.add,
+                    color: CupertinoColors.white,
+                    size: 20.0,
+                  ),
                 ),
               ),
             ),
