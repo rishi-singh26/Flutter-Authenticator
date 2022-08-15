@@ -18,6 +18,9 @@ class BottomButtons extends StatelessWidget {
           icon: CupertinoIcons.qrcode_viewfinder,
           title: 'Scan QR',
           onPress: () {
+            if (currentPage == 0) {
+              return;
+            }
             Navigator.pushReplacement(
               context,
               CupertinoPageRoute<Widget>(
@@ -33,6 +36,9 @@ class BottomButtons extends StatelessWidget {
           icon: CupertinoIcons.pencil_circle,
           title: 'Manually',
           onPress: () {
+            if (currentPage == 1) {
+              return;
+            }
             Navigator.pushReplacement(
               context,
               CupertinoPageRoute<Widget>(
@@ -48,6 +54,9 @@ class BottomButtons extends StatelessWidget {
           icon: CupertinoIcons.globe,
           title: 'URL',
           onPress: () {
+            if (currentPage == 2) {
+              return;
+            }
             Navigator.pushReplacement(
               context,
               CupertinoPageRoute<Widget>(
@@ -63,6 +72,9 @@ class BottomButtons extends StatelessWidget {
           icon: CupertinoIcons.shield_fill,
           title: 'Google',
           onPress: () {
+            if (currentPage == 3) {
+              return;
+            }
             Navigator.pushReplacement(
               context,
               CupertinoPageRoute<Widget>(
@@ -78,6 +90,9 @@ class BottomButtons extends StatelessWidget {
           icon: CupertinoIcons.folder,
           title: 'Files',
           onPress: () {
+            if (currentPage == 4) {
+              return;
+            }
             Navigator.pushReplacement(
               context,
               CupertinoPageRoute<Widget>(

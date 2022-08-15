@@ -83,9 +83,11 @@ class _KeypairPageState extends State<KeypairPage> {
       showSpinner = true;
     });
     try {
-      UserCredential user = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-              email: widget.email, password: widget.password);
+      UserCredential user =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: widget.email,
+        password: widget.password,
+      );
 
       Map<String, dynamic> userData = {
         'userId': user.user!.uid,

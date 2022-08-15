@@ -1,16 +1,10 @@
 import 'dart:developer';
 import 'dart:io';
-import 'package:authenticator/modals/totp_acc_modal.dart';
 import 'package:authenticator/pages/scanner/components/bottom_buttons.dart';
 import 'package:authenticator/pages/scanner/components/select_accounts.dart';
-import 'package:authenticator/redux/combined_store.dart';
-import 'package:authenticator/redux/store/app.state.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypton/crypton.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:authenticator/pages/scanner/functions.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
-import 'package:redux/redux.dart';
 
 class Scanner extends StatefulWidget {
   const Scanner({Key? key}) : super(key: key);
@@ -114,65 +108,13 @@ class _ScannerState extends State<Scanner> {
 
   Future<bool> addAccount(BuildContext context, String result, Uri uri) async {
     try {
-      Store<AppState> store = await AppStore.getAppStore();
-
-      String issuer = uri.queryParameters.containsKey('issuer')
-          ? uri.queryParameters['issuer'].toString()
-          : '';
-      String host = uri.host;
-      String name =
-          uri.pathSegments.isNotEmpty ? uri.pathSegments[0].toString() : '';
-      String protocol = uri.scheme;
-      String secret = uri.queryParameters.containsKey('secret')
-          ? uri.queryParameters['secret'].toString()
-          : '';
-      String algorithm = uri.queryParameters.containsKey('algorithm')
-          ? uri.queryParameters['algorithm'].toString()
-          : 'SHA1';
-      String digits = uri.queryParameters.containsKey('digits')
-          ? uri.queryParameters['digits'].toString()
-          : '6';
-      String period = uri.queryParameters.containsKey('period')
-          ? uri.queryParameters['period'].toString()
-          : '30';
-
-      TotpAccount account = TotpAccount(
-        createdOn: DateTime.now(),
-        data: TotpAccountDetail(
-          backupCodes: '',
-          host: host,
-          issuer: issuer,
-          name: name,
-          protocol: protocol,
-          secret: secret,
-          tags: [],
-          url: result,
-        ),
-        id: 'id',
-        name: issuer.toUpperCase(),
-        userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-        options: TotpOptions(
-          isEnabled: false,
-          selectedAlgorithm: algorithm,
-          selectedDigitsCount: digits,
-          selectedInterval: period,
-        ),
-        isFavourite: false,
+      AddAccountResp addAccountResp = await addAccountToFirebase(
+        result,
+        uri,
+        () => Navigator.canPop(context) ? Navigator.pop(context) : null,
       );
-      TotpAccntCryptoResp encryptedAccount = account.encrypt(
-        RSAPublicKey.fromPEM(store.state.auth.userData.publicKey),
-      );
-      if (!encryptedAccount.status) {
-        return false;
-      }
-      await FirebaseFirestore.instance
-          .collection('newTotpAccounts')
-          .add(encryptedAccount.data.toApiJson());
-      // ignore: use_build_context_synchronously
-      Navigator.canPop(context) ? Navigator.pop(context) : null;
-      return true;
+      return addAccountResp.status;
     } catch (e) {
-      // print(e.toString());
       return false;
     }
   }

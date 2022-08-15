@@ -1,11 +1,7 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
-import 'package:authenticator/redux/combined_store.dart';
-import 'package:authenticator/redux/store/app.state.dart';
-import 'package:crypton/crypton.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:authenticator/pages/scanner/functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:otpauth_migration/otpauth_migration.dart';
-import 'package:redux/redux.dart';
 
 class SelectAccounts extends StatefulWidget {
   final String scanResult;
@@ -23,6 +19,7 @@ class _SelectAccountsState extends State<SelectAccounts> {
 
   List<TotpAccount> accounts = [];
   List<int> unSelectedAccountIndices = [];
+  String errorMessage = '';
 
   @override
   void initState() {
@@ -30,110 +27,78 @@ class _SelectAccountsState extends State<SelectAccounts> {
     super.initState();
   }
 
-  _showDilogue(
-      BuildContext context, String title, String content, Function onPress) {
-    showCupertinoDialog(
-      context: context,
-      builder: (context) {
-        return CupertinoAlertDialog(
-          title: Text(
-            title,
-            style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
-          ),
-          content: Text(
-            content,
-            style: CupertinoTheme.of(context).textTheme.textStyle,
-          ),
-          actions: [
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            CupertinoDialogAction(
-              onPressed: () {
-                Navigator.of(context).pop();
-                onPress();
-              },
-              child: const Text('Continue'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // _showDilogue(
+  //     BuildContext context, String title, String content, Function onPress) {
+  //   showCupertinoDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return CupertinoAlertDialog(
+  //         title: Text(
+  //           title,
+  //           style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+  //         ),
+  //         content: Text(
+  //           content,
+  //           style: CupertinoTheme.of(context).textTheme.textStyle,
+  //         ),
+  //         actions: [
+  //           CupertinoDialogAction(
+  //             isDestructiveAction: true,
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //             },
+  //             child: const Text('Cancel'),
+  //           ),
+  //           CupertinoDialogAction(
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //               onPress();
+  //             },
+  //             child: const Text('Continue'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   _decode(String migrationUri) async {
     try {
-      final OtpAuthMigration otpAuthParser = OtpAuthMigration();
-      final String decodedUri = Uri.decodeComponent(migrationUri);
-      print(decodedUri);
-      List<String> accountsURIs = otpAuthParser.decode(decodedUri);
-      print(accountsURIs);
-      Store<AppState> store = await AppStore.getAppStore();
-
-      for (String accountUri in accountsURIs) {
-        final Uri uriComponents = Uri.parse(accountUri);
-        String issuer = uriComponents.queryParameters.containsKey('issuer')
-            ? uriComponents.queryParameters['issuer'].toString()
-            : '';
-        String host = uriComponents.host;
-        String name = uriComponents.pathSegments.isNotEmpty
-            ? uriComponents.pathSegments[0].toString()
-            : '';
-        String protocol = uriComponents.scheme;
-        String secret = uriComponents.queryParameters.containsKey('secret')
-            ? uriComponents.queryParameters['secret'].toString()
-            : '';
-        String algorithm =
-            uriComponents.queryParameters.containsKey('algorithm')
-                ? uriComponents.queryParameters['algorithm'].toString()
-                : 'SHA1';
-        String digits = uriComponents.queryParameters.containsKey('digits')
-            ? uriComponents.queryParameters['digits'].toString()
-            : '6';
-        String period = uriComponents.queryParameters.containsKey('period')
-            ? uriComponents.queryParameters['period'].toString()
-            : '30';
-
-        TotpAccount account = TotpAccount(
-          createdOn: DateTime.now(),
-          data: TotpAccountDetail(
-            backupCodes: '',
-            host: host,
-            issuer: issuer,
-            name: name,
-            protocol: protocol,
-            secret: secret,
-            tags: [],
-            url: accountUri,
-          ),
-          id: 'id',
-          name: issuer.toUpperCase(),
-          userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-          options: TotpOptions(
-            isEnabled: false,
-            selectedAlgorithm: algorithm,
-            selectedDigitsCount: digits,
-            selectedInterval: period,
-          ),
-          isFavourite: false,
-        );
-        TotpAccntCryptoResp accountEncryptionResp = account.encrypt(
-          RSAPublicKey.fromPEM(store.state.auth.userData.publicKey),
-        );
-        accounts.add(accountEncryptionResp.data);
+      DecodeGoogleUriResp decodeGoogleUriResp =
+          await decodeGoogleMigration(migrationUri);
+      if (!decodeGoogleUriResp.status) {
+        setState(() {
+          errorMessage = decodeGoogleUriResp.message;
+        });
+        return;
       }
-      setState(() {});
+      setState(() {
+        accounts = decodeGoogleUriResp.accounts;
+      });
     } catch (e) {
-      _showDilogue(
-        context,
-        'Alert! Error occured.',
-        e.toString(),
-        () {},
-      );
+      setState(() {
+        errorMessage = e.toString();
+      });
+    }
+  }
+
+  Future<bool> _addAccounts(
+      BuildContext context, List<TotpAccount> accounts) async {
+    try {
+      for (var i = 0; i < accounts.length; i++) {
+        if (unSelectedAccountIndices.contains(i)) {
+          continue;
+        }
+        TotpAccount account = accounts[i];
+        await FirebaseFirestore.instance
+            .collection('newTotpAccounts')
+            .add(account.toApiJson());
+        // ignore: use_build_context_synchronously
+        Navigator.canPop(context) ? Navigator.pop(context) : null;
+      }
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -158,47 +123,71 @@ class _SelectAccountsState extends State<SelectAccounts> {
           ];
         }),
         body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 15.0),
-                itemCount: accounts.length,
-                itemBuilder: (context, index) {
-                  TotpAccount thisAccount = accounts[index];
-                  return AccountTile(
-                    accountName: thisAccount.data.name,
-                    issuerName: thisAccount.data.issuer,
-                    switchVal: !unSelectedAccountIndices.contains(index),
-                    isFirst: index == 0,
-                    isLast: index == accounts.length - 1,
-                    onSwitch: (value) {
-                      unSelectedAccountIndices.contains(index)
-                          ? setState(
-                              () => unSelectedAccountIndices.remove(index))
-                          : setState(() => unSelectedAccountIndices.add(index));
-                    },
-                  );
-                },
-              ),
+              child: accounts.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: Text(
+                        'No accounts available \nError occured while decoding accounts.\nPlease try scanning one account at a time',
+                        style: CupertinoTheme.of(context).textTheme.textStyle,
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 15.0),
+                      itemCount: accounts.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return Text(
+                            errorMessage,
+                            style: const TextStyle(
+                                color: CupertinoColors.systemRed),
+                          );
+                        }
+                        final int index2 = index - 1;
+                        TotpAccount thisAccount = accounts[index2];
+                        return AccountTile(
+                          accountName: thisAccount.data.name,
+                          issuerName: thisAccount.data.issuer,
+                          switchVal: !unSelectedAccountIndices.contains(index2),
+                          isFirst: index == 1,
+                          isLast: index == accounts.length,
+                          onSwitch: (value) {
+                            unSelectedAccountIndices.contains(index2)
+                                ? setState(() =>
+                                    unSelectedAccountIndices.remove(index2))
+                                : setState(
+                                    () => unSelectedAccountIndices.add(index2));
+                          },
+                        );
+                      },
+                    ),
             ),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20),
-              child: CupertinoButton.filled(
-                child: Text(
-                  'Continue',
-                  style: TextStyle(
-                    color: CupertinoTheme.of(context).textTheme.textStyle.color,
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
+            accounts.isEmpty
+                ? const SizedBox()
+                : Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 30.0, vertical: 20),
+                    child: CupertinoButton.filled(
+                      child: Text(
+                        'Continue',
+                        style: TextStyle(
+                          color: CupertinoTheme.of(context)
+                              .textTheme
+                              .textStyle
+                              .color,
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onPressed: () {
+                        _addAccounts(context, accounts);
+                        // print(unSelectedAccountIndices);
+                        // print(accounts.length);
+                      },
+                    ),
                   ),
-                ),
-                onPressed: () {
-                  print(unSelectedAccountIndices);
-                  print(accounts.length);
-                },
-              ),
-            ),
           ],
         ),
       ),
