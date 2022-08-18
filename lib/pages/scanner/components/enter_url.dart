@@ -1,12 +1,8 @@
-import 'package:authenticator/modals/totp_acc_modal.dart';
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:authenticator/pages/scanner/components/bottom_buttons.dart';
-import 'package:authenticator/redux/combined_store.dart';
-import 'package:authenticator/redux/store/app.state.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypton/crypton.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:authenticator/pages/scanner/functions.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:redux/redux.dart';
 
 class EnterUrl extends StatefulWidget {
   const EnterUrl({Key? key}) : super(key: key);
@@ -50,98 +46,25 @@ class _EnterUrlState extends State<EnterUrl> {
 
   _onSubmit(BuildContext context) async {
     try {
-      Store<AppState> store = await AppStore.getAppStore();
       String url = urlController.text;
       final Uri uriComponents = Uri.parse(url);
       if (uriComponents.isScheme('otpauth')) {
-        String serviceName = uriComponents.queryParameters.containsKey('issuer')
-            ? uriComponents.queryParameters['issuer'].toString()
-            : '';
-        String algorithm =
-            uriComponents.queryParameters.containsKey('algorithm')
-                ? uriComponents.queryParameters['algorithm'].toString()
-                : 'SHA1';
-        String digits = uriComponents.queryParameters.containsKey('digits')
-            ? uriComponents.queryParameters['digits'].toString()
-            : '6';
-        String period = uriComponents.queryParameters.containsKey('period')
-            ? uriComponents.queryParameters['period'].toString()
-            : '30';
-        String account = uriComponents.pathSegments[0].toString();
-        String secret = uriComponents.queryParameters.containsKey('secret')
-            ? uriComponents.queryParameters['secret'].toString()
-            : '';
-
-        if (secret.isEmpty) {
-          // ignore: use_build_context_synchronously
-          _showDilogue(
-            context,
-            'Alert!',
-            'Invalid account data.',
-            true,
-          );
+        AddAccountResp addAccountResp = await addAccountToFirebase(
+          url,
+          uriComponents,
+          () => null,
+        );
+        if (!addAccountResp.status) {
+          _showDilogue(context, 'Alert!', addAccountResp.message, true);
           return;
         }
-        String host = uriComponents.host;
-
-        TotpAccount accntData = TotpAccount(
-          createdOn: DateTime.now(),
-          data: TotpAccountDetail(
-            backupCodes: '',
-            host: host,
-            issuer: serviceName,
-            name: account,
-            protocol: uriComponents.scheme,
-            secret: secret,
-            tags: [],
-            url: url,
-          ),
-          id: '',
-          name: serviceName.toUpperCase(),
-          userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-          options: TotpOptions(
-            isEnabled: false,
-            selectedAlgorithm: algorithm,
-            selectedDigitsCount: digits,
-            selectedInterval: period,
-          ),
-          isFavourite: false,
-        );
-        TotpAccntCryptoResp encryptionResp = accntData.encrypt(
-          RSAPublicKey.fromPEM(store.state.auth.userData.publicKey),
-        );
-        if (!encryptionResp.status) {
-          // ignore: use_build_context_synchronously
-          _showDilogue(
-            context,
-            'Alert!',
-            'Error occured while encrypting account data',
-            true,
-          );
-        }
-        FirebaseFirestore.instance
-            .collection('newTotpAccounts')
-            .add(encryptionResp.data.toApiJson())
-            .then(
-              (value) =>
-                  Navigator.canPop(context) ? Navigator.pop(context) : null,
-            );
+        Navigator.canPop(context) ? Navigator.pop(context) : null;
       } else {
-        // ignore: use_build_context_synchronously
-        _showDilogue(
-          context,
-          'Alert!',
-          'Enter valid url',
-          true,
-        );
+        _showDilogue(context, 'Alert!', 'Enter valid url', true);
+        return;
       }
     } catch (e) {
-      _showDilogue(
-        context,
-        'Alert!',
-        e.toString(),
-        true,
-      );
+      _showDilogue(context, 'Alert!', e.toString(), true);
       return;
     }
   }

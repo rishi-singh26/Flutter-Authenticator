@@ -38,11 +38,11 @@ class _KeypairPageState extends State<KeypairPage> {
     super.initState();
   }
 
-  showAlert(String content, {String header = 'Alert!'}) {
+  _showAlert(BuildContext context, String content, {String header = 'Alert!'}) {
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text('Alert!'),
+        title: Text(header),
         content: Text(content),
         actions: <CupertinoDialogAction>[
           CupertinoDialogAction(
@@ -57,21 +57,27 @@ class _KeypairPageState extends State<KeypairPage> {
     );
   }
 
-  downloadPublicKey(String key, String filename) async {
-    if (pbKeyInpCtrl.text.isEmpty) {
-      showAlert('Enter public key file name!');
+  downloadPublicKey(
+      BuildContext context, String key, String filename, String type) async {
+    if (filename.isEmpty) {
+      _showAlert(context, 'Enter $type Key file name!');
       return;
     }
     PickDirResp dirResp = await FS.pickDirectory();
     if (!dirResp.status) {
-      dirResp.path == '' ? null : showAlert('Error in picking directory');
+      dirResp.path == ''
+          ? null
+          // ignore: use_build_context_synchronously
+          : _showAlert(context, 'Error in picking directory');
       return;
     }
     String pbKeyFilePath = '${dirResp.path}/$filename.pem';
     WriteFileResp writeFileResp =
         await FS.writeFileContents(File(pbKeyFilePath), key);
     if (!writeFileResp.status) {
-      showAlert(
+      // ignore: use_build_context_synchronously
+      _showAlert(
+        context,
         'Error in saving file, try again: ${writeFileResp.message}.\n\nTry using another folder to save keys.',
       );
       return;
@@ -256,9 +262,10 @@ class _KeypairPageState extends State<KeypairPage> {
               placeholder: 'Enter file name ex. PublicKey',
               suffix: CupertinoButton(
                 onPressed: () => downloadPublicKey(
-                  keyPair.publicKey.toFormattedPEM(),
-                  pbKeyInpCtrl.text,
-                ),
+                    context,
+                    keyPair.publicKey.toFormattedPEM(),
+                    pbKeyInpCtrl.text,
+                    'Public'),
                 child: const Icon(CupertinoIcons.cloud_download),
               ),
             ),
@@ -362,9 +369,10 @@ class _KeypairPageState extends State<KeypairPage> {
               placeholder: 'Enter file name ex. PrivateKey',
               suffix: CupertinoButton(
                 onPressed: () => downloadPublicKey(
-                  keyPair.privateKey.toFormattedPEM(),
-                  pvKeyInpCtrl.text,
-                ),
+                    context,
+                    keyPair.privateKey.toFormattedPEM(),
+                    pvKeyInpCtrl.text,
+                    'Private'),
                 child: const Icon(CupertinoIcons.cloud_download),
               ),
             ),

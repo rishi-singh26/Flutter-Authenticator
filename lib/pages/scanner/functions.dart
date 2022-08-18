@@ -52,7 +52,7 @@ Future<AddAccountResp> addAccountToFirebase(
         issuer: issuer,
         name: name,
         protocol: protocol,
-        secret: secret,
+        secret: secret.toUpperCase(),
         tags: [],
         url: result,
       ),
@@ -166,6 +166,35 @@ Future<DecodeGoogleUriResp> decodeGoogleMigration(String migrationUri) async {
       message: e.toString(),
       status: true,
       accounts: [],
+    );
+  }
+}
+
+class EncodeToGoogleUriResp {
+  final bool status;
+  final String message;
+  final String uri;
+  const EncodeToGoogleUriResp({
+    required this.message,
+    required this.status,
+    required this.uri,
+  });
+}
+
+EncodeToGoogleUriResp encodeToGoogleMigration(List<String> uris) {
+  try {
+    final OtpAuthMigration otpAuthParser = OtpAuthMigration();
+    String migratedUri = otpAuthParser.encode(uris);
+    return EncodeToGoogleUriResp(
+      message: 'Success',
+      status: true,
+      uri: migratedUri,
+    );
+  } catch (e) {
+    return EncodeToGoogleUriResp(
+      message: e.toString(),
+      status: false,
+      uri: '',
     );
   }
 }

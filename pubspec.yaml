@@ -53,6 +53,7 @@ dependencies:
     ootp: ^0.1.1
     pull_down_button: ^0.1.0-beta.6
     otpauth_migration: ^0.0.7
+    qr_flutter: ^4.0.0
 
 dev_dependencies:
     flutter_test:

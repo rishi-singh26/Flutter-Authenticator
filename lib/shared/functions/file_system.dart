@@ -18,7 +18,7 @@ class FS {
     // Write the file
     try {
       File writtenFile = await file.writeAsString(text);
-      return WriteFileResp(file: writtenFile, status: true, message: '');
+      return WriteFileResp(file: writtenFile, status: true, message: 'Success');
     } catch (e) {
       return WriteFileResp(file: file, status: false, message: e.toString());
     }

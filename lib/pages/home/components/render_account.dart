@@ -36,13 +36,14 @@ class _RenderAccountState extends State<RenderAccount>
 
   getOtp() {
     try {
-      String accountSecret = stripSpaces(widget.accountData.data.secret);
+      String accountSecret =
+          stripSpaces(widget.accountData.data.secret.toUpperCase());
       // final code = otp.OTP.generateTOTPCodeString(
       otp.OTP.generateTOTPCodeString(
         accountSecret,
         DateTime.now().millisecondsSinceEpoch,
       );
-      Uint8List uiInt8Secret = base32.decode(accountSecret.toUpperCase());
+      Uint8List uiInt8Secret = base32.decode(accountSecret);
       final TOTP totp2 = TOTP.secret(uiInt8Secret);
       setState(() {
         otpData = OTPdata(
