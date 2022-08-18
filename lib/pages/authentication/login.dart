@@ -21,7 +21,8 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  // late FocusNode emailFocusNode;
+  bool hidePassword = true;
+  _setHidePass(bool val) => setState(() => hidePassword = val);
   late FocusNode passwordFocusNode;
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -206,7 +207,7 @@ class _LoginState extends State<Login> {
             child: CupertinoTextField(
               placeholder: 'Password',
               controller: passwordController,
-              obscureText: true,
+              obscureText: hidePassword,
               readOnly: showSpinner,
               // keyboardType: TextInputType.none,
               autocorrect: false,
@@ -217,13 +218,26 @@ class _LoginState extends State<Login> {
                 vertical: 12.0,
                 horizontal: 10.0,
               ),
+              suffix: CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: Icon(
+                  hidePassword ? CupertinoIcons.eye_slash : CupertinoIcons.eye,
+                  color: CupertinoTheme.of(context)
+                      .textTheme
+                      .tabLabelTextStyle
+                      .color,
+                  size: 20,
+                ),
+                onPressed: () => _setHidePass(!hidePassword),
+              ),
             ),
           ),
           const SizedBox(height: 30.0),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 30.0),
             child: CupertinoButton.filled(
-              onPressed: () => _startLogin(context),
+              disabledColor: CupertinoColors.systemBlue,
+              onPressed: showSpinner ? null : () => _startLogin(context),
               child: showSpinner
                   ? const CupertinoActivityIndicator()
                   : const Text(

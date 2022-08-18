@@ -30,7 +30,7 @@ class _MyHomePageState extends State<MyHomePage> {
       0; // 0 => Newest first, 1 => Oldest first, 2 => Alphabetical desc, 3 => Alphabetical asc
 
   _showAlertDilogue(String title, String message, Function onPress) {
-    showCupertinoDialog(
+    return showCupertinoDialog(
       context: context,
       builder: (context) {
         return CupertinoAlertDialog(
@@ -116,10 +116,17 @@ class _MyHomePageState extends State<MyHomePage> {
     return true;
   }
 
-  _showOTPBox(BuildContext context, TotpAccount account) {
-    showCupertinoDialog(
+  _showOTPBox(BuildContext context, TotpAccount account, String key) {
+    TotpAccntCryptoResp decryptedData =
+        account.decrypt(RSAPrivateKey.fromPEM(key));
+    if (!decryptedData.status) {
+      _showAlertDilogue(
+          'Alert!', 'An error occured while decryption!', () => null);
+      return;
+    }
+    return showCupertinoDialog(
       context: context,
-      builder: (context) => OtpView(accountData: account),
+      builder: (context) => OtpView(accountData: decryptedData.data),
     );
   }
 
@@ -258,28 +265,26 @@ class _MyHomePageState extends State<MyHomePage> {
                             itemCount: accounts.length,
                             itemBuilder: (context, index) {
                               if (isPVKeyAvailable) {
-                                TotpAccntCryptoResp decryptedData =
-                                    accounts[index].decrypt(
-                                        RSAPrivateKey.fromPEM(state.pvKey.key));
-                                if (!decryptedData.status) {
-                                  return RenderAccountLocked(
-                                    accountData: accounts[index],
-                                    onPressed: () => _showAlertDilogue(
-                                      'Alert!',
-                                      'An error occured while decryption!',
-                                      () => null,
-                                    ),
-                                    isTopElement: index == 0,
-                                    isBottomElement:
-                                        index == accounts.length - 1,
-                                  );
-                                }
+                                // TotpAccntCryptoResp decryptedData =
+                                //     accounts[index].decrypt(
+                                //         RSAPrivateKey.fromPEM(state.pvKey.key));
+                                // if (!decryptedData.status) {
+                                //   return RenderAccountLocked(
+                                //     accountData: accounts[index],
+                                //     onPressed: () => _showAlertDilogue(
+                                //       'Alert!',
+                                //       'An error occured while decryption!',
+                                //       () => null,
+                                //     ),
+                                //     isTopElement: index == 0,
+                                //     isBottomElement:
+                                //         index == accounts.length - 1,
+                                //   );
+                                // }
                                 return RenderAccountLocked(
                                   accountData: accounts[index],
-                                  onPressed: () => _showOTPBox(
-                                    context,
-                                    decryptedData.data,
-                                  ),
+                                  onPressed: () => _showOTPBox(context,
+                                      accounts[index], state.pvKey.key),
                                   isTopElement: index == 0,
                                   isBottomElement: index == accounts.length - 1,
                                 );

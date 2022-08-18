@@ -79,8 +79,8 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CircularCountDownTimer(
-                  width: 50,
-                  height: 50,
+                  width: 40,
+                  height: 40,
                   strokeCap: StrokeCap.round,
                   duration: 30,
                   initialDuration: 30 - otpData.remainingTime,
@@ -89,10 +89,10 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
                   ringColor: CupertinoTheme.of(context).barBackgroundColor,
                   // ringColor: CupertinoTheme.of(context).barBackgroundColor,
                   fillColor: const Color(0xFF2dcc70),
-                  strokeWidth: 4.0,
+                  strokeWidth: 3.5,
                   textStyle:
                       CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                   textFormat: CountdownTextFormat.S,
