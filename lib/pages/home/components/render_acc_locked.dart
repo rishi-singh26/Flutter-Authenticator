@@ -63,140 +63,142 @@ class _RenderAccountLockedState extends State<RenderAccountLocked> {
       bottomRight:
           widget.isBottomElement ? const Radius.circular(13.0) : Radius.zero,
     );
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 15.0),
-      decoration: BoxDecoration(
-        borderRadius: borderRadius,
-        color: CupertinoTheme.of(context).barBackgroundColor,
-      ),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: Slidable(
-          groupTag: 'uniqueKeyForAccountsList',
-          key: const ValueKey(0),
-          endActionPane: ActionPane(
-            extentRatio: 0.6,
-            motion: const ScrollMotion(),
-            children: [
-              SlidableAction(
-                onPressed: (contxt) async {
-                  if (await canDeleteAccount(context, 'Name')) {
+    return GestureDetector(
+      onTap: () => widget.onPressed(),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 15.0),
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          color: CupertinoTheme.of(context).barBackgroundColor,
+        ),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: Slidable(
+            groupTag: 'uniqueKeyForAccountsList',
+            key: const ValueKey(0),
+            endActionPane: ActionPane(
+              extentRatio: 0.6,
+              motion: const ScrollMotion(),
+              children: [
+                SlidableAction(
+                  onPressed: (contxt) async {
+                    if (await canDeleteAccount(context, 'Name')) {
+                      FirebaseFirestore.instance
+                          .collection('newTotpAccounts')
+                          .doc(widget.accountData.id)
+                          .delete();
+                    }
+                  },
+                  backgroundColor: const Color(0xFFFE4A49),
+                  foregroundColor: CupertinoColors.white,
+                  icon: CupertinoIcons.delete,
+                ),
+                SlidableAction(
+                  onPressed: (contxt) {
                     FirebaseFirestore.instance
                         .collection('newTotpAccounts')
                         .doc(widget.accountData.id)
-                        .delete();
-                  }
-                },
-                backgroundColor: const Color(0xFFFE4A49),
-                foregroundColor: CupertinoColors.white,
-                icon: CupertinoIcons.delete,
-              ),
-              SlidableAction(
-                onPressed: (contxt) {
-                  FirebaseFirestore.instance
-                      .collection('newTotpAccounts')
-                      .doc(widget.accountData.id)
-                      .update(
-                    {'isFavourite': !widget.accountData.isFavourite},
-                  );
-                },
-                backgroundColor: CupertinoColors.activeOrange,
-                foregroundColor: CupertinoColors.white,
-                icon: widget.accountData.isFavourite
-                    ? CupertinoIcons.star_slash_fill
-                    : CupertinoIcons.star,
-              ),
-              SlidableAction(
-                onPressed: (contxt) {
-                  Navigator.push(
-                    context,
-                    CupertinoPageRoute<Widget>(
-                      fullscreenDialog: true,
-                      builder: (BuildContext context) {
-                        return AccountDetails(account: widget.accountData);
-                      },
-                    ),
-                  );
-                },
-                backgroundColor: CupertinoColors.systemGrey,
-                foregroundColor: CupertinoColors.white,
-                icon: CupertinoIcons.pencil_circle,
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12.0,
-              vertical: 8.0,
+                        .update(
+                      {'isFavourite': !widget.accountData.isFavourite},
+                    );
+                  },
+                  backgroundColor: CupertinoColors.activeOrange,
+                  foregroundColor: CupertinoColors.white,
+                  icon: widget.accountData.isFavourite
+                      ? CupertinoIcons.star_slash_fill
+                      : CupertinoIcons.star,
+                ),
+                SlidableAction(
+                  onPressed: (contxt) {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute<Widget>(
+                        fullscreenDialog: true,
+                        builder: (BuildContext context) {
+                          return AccountDetails(account: widget.accountData);
+                        },
+                      ),
+                    );
+                  },
+                  backgroundColor: CupertinoColors.systemGrey,
+                  foregroundColor: CupertinoColors.white,
+                  icon: CupertinoIcons.pencil_circle,
+                ),
+              ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(right: 10.0),
-                      padding: const EdgeInsets.all(3.0),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: CupertinoColors.separator,
-                          width: 0.5,
-                        ),
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(6.0)),
-                      ),
-                      child: Padding(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(right: 10.0),
                         padding: const EdgeInsets.all(3.0),
-                        child: imageName == 'account'
-                            ? const Icon(
-                                CupertinoIcons.person_crop_circle,
-                                size: 35,
-                                // color: CupertinoColors.placeholderText,
-                                color: CupertinoColors.secondaryLabel,
-                              )
-                            : Image.asset(imageName, height: 35, width: 35),
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.accountData.data.issuer,
-                          style: CupertinoTheme.of(context)
-                              .textTheme
-                              .navTitleTextStyle,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: CupertinoColors.separator,
+                            width: 0.5,
+                          ),
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(6.0)),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 3.0),
-                          child: SizedBox(
-                            width: 200,
-                            child: Text(
-                              Uri.decodeComponent(
-                                (widget.accountData.data.name).split(':').last,
-                              ),
-                              maxLines: 2,
-                              style: TextStyle(
-                                color: CupertinoTheme.of(context)
-                                    .textTheme
-                                    .tabLabelTextStyle
-                                    .color,
-                                fontSize: 13,
+                        child: Padding(
+                          padding: const EdgeInsets.all(3.0),
+                          child: imageName == 'account'
+                              ? const Icon(
+                                  CupertinoIcons.person_crop_circle,
+                                  size: 35,
+                                  // color: CupertinoColors.placeholderText,
+                                  color: CupertinoColors.secondaryLabel,
+                                )
+                              : Image.asset(imageName, height: 35, width: 35),
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.accountData.data.issuer,
+                            style: CupertinoTheme.of(context)
+                                .textTheme
+                                .navTitleTextStyle,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 3.0),
+                            child: SizedBox(
+                              width: 200,
+                              child: Text(
+                                Uri.decodeComponent(
+                                  (widget.accountData.data.name)
+                                      .split(':')
+                                      .last,
+                                ),
+                                maxLines: 2,
+                                style: TextStyle(
+                                  color: CupertinoTheme.of(context)
+                                      .textTheme
+                                      .tabLabelTextStyle
+                                      .color,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                CupertinoButton(
-                  onPressed: () => widget.onPressed(),
-                  child: const Icon(CupertinoIcons.right_chevron, size: 20),
-                ),
-              ],
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Icon(CupertinoIcons.right_chevron, size: 20),
+                ],
+              ),
             ),
           ),
         ),

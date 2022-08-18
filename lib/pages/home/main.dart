@@ -1,8 +1,8 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
 import 'package:authenticator/pages/Settings/main.dart' as settings;
 import 'package:authenticator/pages/home/components/bottom_container.dart';
+import 'package:authenticator/pages/home/components/otp_view.dart';
 import 'package:authenticator/pages/home/components/render_acc_locked.dart';
-import 'package:authenticator/pages/home/components/render_account.dart';
 import 'package:authenticator/pages/scanner/main.dart';
 import 'package:authenticator/redux/pvKey/pv_key_action.dart';
 import 'package:authenticator/redux/store/app.state.dart';
@@ -114,6 +114,13 @@ class _MyHomePageState extends State<MyHomePage> {
       return false;
     }
     return true;
+  }
+
+  _showOTPBox(BuildContext context, TotpAccount account) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => OtpView(accountData: account),
+    );
   }
 
   @override
@@ -260,23 +267,36 @@ class _MyHomePageState extends State<MyHomePage> {
                                     onPressed: () => _showAlertDilogue(
                                       'Alert!',
                                       'An error occured while decryption!',
-                                      () {},
+                                      () => null,
                                     ),
                                     isTopElement: index == 0,
                                     isBottomElement:
                                         index == accounts.length - 1,
                                   );
                                 }
-                                return RenderAccount(
-                                  accountData: decryptedData.data,
+                                return RenderAccountLocked(
+                                  accountData: accounts[index],
+                                  onPressed: () => _showOTPBox(
+                                    context,
+                                    decryptedData.data,
+                                  ),
                                   isTopElement: index == 0,
                                   isBottomElement: index == accounts.length - 1,
                                 );
+                                // return RenderAccount(
+                                //   accountData: decryptedData.data,
+                                //   isTopElement: index == 0,
+                                //   isBottomElement: index == accounts.length - 1,
+                                // );
                               }
                               return RenderAccountLocked(
                                 accountData: accounts[index],
-                                onPressed: () => _attachOrDetackPVKey(
-                                    context, isPVKeyAvailable),
+                                onPressed: () => _showAlertDilogue(
+                                  'Alert!',
+                                  'Private Key not attached.\nDo you wnat to attach Private Key?',
+                                  () => _attachOrDetackPVKey(
+                                      context, isPVKeyAvailable),
+                                ),
                                 isTopElement: index == 0,
                                 isBottomElement: index == accounts.length - 1,
                               );
