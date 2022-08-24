@@ -147,7 +147,7 @@ class _SelectAccountsState extends State<SelectAccounts> {
                         }
                         final int index2 = index - 1;
                         TotpAccount thisAccount = accounts[index2];
-                        return AccountTile(
+                        return _AccountTile(
                           accountName: thisAccount.data.name,
                           issuerName: thisAccount.data.issuer,
                           switchVal: !unSelectedAccountIndices.contains(index2),
@@ -195,14 +195,14 @@ class _SelectAccountsState extends State<SelectAccounts> {
   }
 }
 
-class AccountTile extends StatelessWidget {
+class _AccountTile extends StatelessWidget {
   final String accountName;
   final String issuerName;
   final bool switchVal;
   final bool isFirst;
   final bool isLast;
   final Function(bool) onSwitch;
-  const AccountTile({
+  const _AccountTile({
     Key? key,
     required this.accountName,
     required this.issuerName,

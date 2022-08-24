@@ -1,7 +1,9 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
+import 'package:authenticator/shared/components/advanced_options.dart';
 import 'package:authenticator/pages/scanner/components/bottom_buttons.dart';
 import 'package:authenticator/redux/combined_store.dart';
 import 'package:authenticator/redux/store/app.state.dart';
+import 'package:authenticator/shared/functions/file_system.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypton/crypton.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,6 +22,12 @@ class _EnterManuallyState extends State<EnterManually> {
   Object _selectedAlgorithm = 'SHA1';
   Object _selectedDigitsCount = '6';
   Object _selectedInterval = '30';
+  int _backupCodesLines = 5;
+  bool _showLoader = false;
+  _setLoader(bool val) => setState(() => _showLoader = val);
+  _setBackupCodeLines(int val) => setState(() => _backupCodesLines = val);
+  bool _isFavourite = false;
+  _setIsFavourite(bool val) => setState(() => _isFavourite = val);
 
   late TextEditingController serviceNameController;
   late TextEditingController accountNameController;
@@ -32,24 +40,6 @@ class _EnterManuallyState extends State<EnterManually> {
       _selectedDigitsCount = '6';
       _selectedInterval = '30';
     });
-  }
-
-  @override
-  void initState() {
-    serviceNameController = TextEditingController();
-    accountNameController = TextEditingController();
-    keyController = TextEditingController();
-    backupCodesController = TextEditingController();
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    serviceNameController.dispose();
-    accountNameController.dispose();
-    keyController.dispose();
-    backupCodesController.dispose();
-    super.dispose();
   }
 
   _showDilogue(
@@ -130,6 +120,7 @@ class _EnterManuallyState extends State<EnterManually> {
 
   _onSubmit(BuildContext context) async {
     try {
+      _setLoader(true);
       Store<AppState> store = await AppStore.getAppStore();
       String serviceName = serviceNameController.text;
       String accountName = accountNameController.text;
@@ -138,6 +129,7 @@ class _EnterManuallyState extends State<EnterManually> {
 
       // ignore: use_build_context_synchronously
       if (!await _validateData(context)) {
+        _setLoader(false);
         return;
       }
       TotpAccount accntData = TotpAccount(
@@ -150,10 +142,11 @@ class _EnterManuallyState extends State<EnterManually> {
           protocol: 'otpauth',
           secret: secret,
           tags: [],
-          url: 'otpauth://totp/$accountName?secret=$secret&issuer=$serviceName',
+          url:
+              'otpauth://totp/$accountName?issuer=$serviceName&secret=${secret.toUpperCase()}&period=$_selectedInterval&digits=$_selectedDigitsCount&algorithm=$_selectedAlgorithm',
         ),
         id: '',
-        name: serviceName.toUpperCase(),
+        name: serviceName,
         userId: FirebaseAuth.instance.currentUser?.uid ?? '',
         options: TotpOptions(
           isEnabled: _advancedOptionsOn,
@@ -161,12 +154,14 @@ class _EnterManuallyState extends State<EnterManually> {
           selectedDigitsCount: _selectedDigitsCount,
           selectedInterval: _selectedInterval,
         ),
-        isFavourite: false,
+        isFavourite: _isFavourite,
       );
+      // print(accntData.data.url);
       TotpAccntCryptoResp encryptionResp = accntData.encrypt(
         RSAPublicKey.fromPEM(store.state.auth.userData.publicKey),
       );
       if (!encryptionResp.status) {
+        _setLoader(false);
         // ignore: use_build_context_synchronously
         _showDilogue(
           context,
@@ -174,6 +169,7 @@ class _EnterManuallyState extends State<EnterManually> {
           'Error occured while encrypting account data',
           true,
         );
+        return;
       }
       FirebaseFirestore.instance
           .collection('newTotpAccounts')
@@ -183,18 +179,60 @@ class _EnterManuallyState extends State<EnterManually> {
                 Navigator.canPop(context) ? Navigator.pop(context) : null,
           );
     } catch (e) {
-      _showDilogue(
-        context,
-        'Alert!',
-        e.toString(),
-        true,
-      );
+      _setLoader(false);
+      _showDilogue(context, 'Alert!', e.toString(), true);
       return;
     }
   }
 
+  _pickBackupCodesFromFile() async {
+    try {
+      PickFileResp filePickResp = await FS.pickSingleFile(['txt']);
+      if (!filePickResp.status) {
+        return;
+      }
+      ReadFileAsLineResp readFileResp =
+          await FS.readFileLines(filePickResp.file);
+      if (!readFileResp.status) {
+        return;
+      }
+      backupCodesController.text = readFileResp.contents.join('\n');
+      _setBackupCodeLines(readFileResp.contents.length);
+    } catch (e) {
+      return;
+    }
+  }
+
+  _clearBackupCodes() {
+    backupCodesController.text = '';
+    _backupCodesLines = 5;
+  }
+
+  @override
+  void initState() {
+    serviceNameController = TextEditingController();
+    accountNameController = TextEditingController();
+    keyController = TextEditingController();
+    backupCodesController = TextEditingController();
+    backupCodesController.addListener(() => setState(() {}));
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    serviceNameController.dispose();
+    accountNameController.dispose();
+    keyController.dispose();
+    backupCodesController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    TextStyle labelStyle = TextStyle(
+      color: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.color,
+      fontSize: 14,
+    );
     return CupertinoPageScaffold(
       child: NestedScrollView(
         headerSliverBuilder: ((context, innerBoxIsScrolled) {
@@ -211,7 +249,7 @@ class _EnterManuallyState extends State<EnterManually> {
               ),
               largeTitle: const Text('Manually'),
               trailing: CupertinoButton(
-                onPressed: () => _onSubmit(context),
+                onPressed: _showLoader ? null : () => _onSubmit(context),
                 padding: const EdgeInsets.all(0.0),
                 alignment: Alignment.centerRight,
                 child: const Text('Save'),
@@ -231,16 +269,7 @@ class _EnterManuallyState extends State<EnterManually> {
                       top: 25.0,
                       left: 7.0,
                     ),
-                    child: Text(
-                      'BASE OPTIONS',
-                      style: TextStyle(
-                        color: CupertinoTheme.of(context)
-                            .textTheme
-                            .tabLabelTextStyle
-                            .color,
-                        fontSize: 14,
-                      ),
-                    ),
+                    child: Text('BASE OPTIONS', style: labelStyle),
                   ),
                   Container(
                     padding: const EdgeInsets.only(
@@ -256,7 +285,7 @@ class _EnterManuallyState extends State<EnterManually> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Tile(
+                        _Tile(
                           label: 'Service',
                           leftImage: false,
                           leftImgName: 'account',
@@ -264,7 +293,7 @@ class _EnterManuallyState extends State<EnterManually> {
                           txtController: serviceNameController,
                           placeholder: 'ex.: Wikipedia',
                         ),
-                        Tile(
+                        _Tile(
                           label: 'Account',
                           leftImage: false,
                           leftImgName: '',
@@ -272,7 +301,7 @@ class _EnterManuallyState extends State<EnterManually> {
                           txtController: accountNameController,
                           placeholder: 'ex.: user@example.com',
                         ),
-                        Tile(
+                        _Tile(
                           label: 'Key',
                           leftImage: false,
                           leftImgName: '',
@@ -289,16 +318,7 @@ class _EnterManuallyState extends State<EnterManually> {
                       top: 25.0,
                       left: 7.0,
                     ),
-                    child: Text(
-                      'BACKUP CODES (OPTIONAL)',
-                      style: TextStyle(
-                        color: CupertinoTheme.of(context)
-                            .textTheme
-                            .tabLabelTextStyle
-                            .color,
-                        fontSize: 14,
-                      ),
-                    ),
+                    child: Text('BACKUP CODES (OPTIONAL)', style: labelStyle),
                   ),
                   Container(
                     padding: const EdgeInsets.all(15.0),
@@ -307,17 +327,47 @@ class _EnterManuallyState extends State<EnterManually> {
                       borderRadius:
                           const BorderRadius.all(Radius.circular(13.0)),
                     ),
-                    child: CupertinoTextField(
-                      placeholder:
-                          'ex.:\n1) 5500 0251\n2)0021 5987\n3)4207 9510\n4)...',
-                      padding: const EdgeInsets.only(bottom: 2),
-                      decoration: BoxDecoration(
-                        color: CupertinoTheme.of(context).barBackgroundColor,
-                        border: null,
-                      ),
-                      controller: backupCodesController,
-                      style: CupertinoTheme.of(context).textTheme.textStyle,
-                      maxLines: 5,
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (backupCodesController.text.isNotEmpty)
+                              SizedBox(
+                                height: 30,
+                                child: CupertinoButton(
+                                  padding: const EdgeInsets.only(
+                                    bottom: 10,
+                                    right: 10,
+                                  ),
+                                  alignment: Alignment.centerRight,
+                                  onPressed: _clearBackupCodes,
+                                  child: const Text('Clear'),
+                                ),
+                              )
+                            else
+                              const SizedBox.shrink(),
+                            SizedBox(
+                              height: 30,
+                              child: CupertinoButton(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                alignment: Alignment.centerRight,
+                                onPressed: _pickBackupCodesFromFile,
+                                child: const Text('Pick File (.txt)'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        CupertinoTextField(
+                          placeholder:
+                              'ex.:\n1) 5500 0251\n2)0021 5987\n3)4207 9510\n4)...',
+                          padding: const EdgeInsets.only(bottom: 2),
+                          decoration: const BoxDecoration(border: null),
+                          controller: backupCodesController,
+                          style: CupertinoTheme.of(context).textTheme.textStyle,
+                          maxLines: _backupCodesLines,
+                        ),
+                      ],
                     ),
                   ),
                   Container(
@@ -328,291 +378,55 @@ class _EnterManuallyState extends State<EnterManually> {
                       borderRadius:
                           const BorderRadius.all(Radius.circular(13.0)),
                     ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding:
-                              const EdgeInsets.only(right: 10.0, bottom: 10.0),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: CupertinoTheme.of(context)
-                                        .textTheme
-                                        .tabLabelTextStyle
-                                        .color ??
-                                    CupertinoColors.opaqueSeparator,
-                                width: 0.1,
-                              ),
-                            ),
+                    child: Container(
+                      padding: const EdgeInsets.only(right: 10.0, bottom: 10.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Favourite',
+                            style: CupertinoTheme.of(context)
+                                .textTheme
+                                .pickerTextStyle,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Advanced Options',
-                                style: CupertinoTheme.of(context)
-                                    .textTheme
-                                    .pickerTextStyle,
-                              ),
-                              CupertinoSwitch(
-                                value: _advancedOptionsOn,
-                                onChanged: (bool value) {
-                                  setState(() {
-                                    _advancedOptionsOn ? resetOptions() : null;
-                                    _advancedOptionsOn = !_advancedOptionsOn;
-                                  });
-                                },
-                              ),
-                            ],
+                          CupertinoSwitch(
+                            value: _isFavourite,
+                            onChanged: (bool value) => _setIsFavourite(value),
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.only(
-                            right: 10.0,
-                            bottom: 15.0,
-                            top: 15.0,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: CupertinoTheme.of(context)
-                                        .textTheme
-                                        .tabLabelTextStyle
-                                        .color ??
-                                    CupertinoColors.opaqueSeparator,
-                                width: 0.1,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 10.0),
-                                child: Text(
-                                  'Algorithm',
-                                  style: CupertinoTheme.of(context)
-                                      .textTheme
-                                      .pickerTextStyle,
-                                ),
-                              ),
-                              Expanded(
-                                child: CupertinoSlidingSegmentedControl(
-                                  backgroundColor: CupertinoColors.systemGrey2,
-                                  thumbColor: CupertinoTheme.of(context)
-                                          .textTheme
-                                          .tabLabelTextStyle
-                                          .color ??
-                                      CupertinoColors.white,
-                                  // This represents the currently selected segmented control.
-                                  groupValue: _selectedAlgorithm,
-                                  // Callback that sets the selected segmented control.
-                                  onValueChanged: (value) {
-                                    if (value != null) {
-                                      setState(() {
-                                        _selectedAlgorithm = value;
-                                        _advancedOptionsOn = true;
-                                      });
-                                    }
-                                  },
-                                  children: const {
-                                    'SHA1': Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 10),
-                                      child: Text(
-                                        'SHA1',
-                                        style: TextStyle(
-                                          color: CupertinoColors.white,
-                                          fontSize: 14.0,
-                                        ),
-                                      ),
-                                    ),
-                                    'SHA256': Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 10),
-                                      child: Text(
-                                        'SHA256',
-                                        style: TextStyle(
-                                          color: CupertinoColors.white,
-                                          fontSize: 14.0,
-                                        ),
-                                      ),
-                                    ),
-                                    'SHA512': Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 10),
-                                      child: Text(
-                                        'SHA512',
-                                        style: TextStyle(
-                                          color: CupertinoColors.white,
-                                          fontSize: 14.0,
-                                        ),
-                                      ),
-                                    ),
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.only(
-                            right: 10.0,
-                            bottom: 15.0,
-                            top: 15.0,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: CupertinoTheme.of(context)
-                                        .textTheme
-                                        .tabLabelTextStyle
-                                        .color ??
-                                    CupertinoColors.opaqueSeparator,
-                                width: 0.1,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 10.0),
-                                child: Text(
-                                  'Digits',
-                                  style: CupertinoTheme.of(context)
-                                      .textTheme
-                                      .pickerTextStyle,
-                                ),
-                              ),
-                              Expanded(
-                                child: CupertinoSlidingSegmentedControl(
-                                  backgroundColor: CupertinoColors.systemGrey2,
-                                  thumbColor: CupertinoTheme.of(context)
-                                          .textTheme
-                                          .tabLabelTextStyle
-                                          .color ??
-                                      CupertinoColors.white,
-                                  // This represents the currently selected segmented control.
-                                  groupValue: _selectedDigitsCount,
-                                  // Callback that sets the selected segmented control.
-                                  onValueChanged: (value) {
-                                    if (value != null) {
-                                      setState(() {
-                                        _selectedDigitsCount = value;
-                                        _advancedOptionsOn = true;
-                                      });
-                                    }
-                                  },
-                                  children: const {
-                                    '6': Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 30),
-                                      child: Text(
-                                        '6',
-                                        style: TextStyle(
-                                          color: CupertinoColors.white,
-                                          fontSize: 14.0,
-                                        ),
-                                      ),
-                                    ),
-                                    '8': Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 30),
-                                      child: Text(
-                                        '8',
-                                        style: TextStyle(
-                                          color: CupertinoColors.white,
-                                          fontSize: 14.0,
-                                        ),
-                                      ),
-                                    ),
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.only(
-                            right: 10.0,
-                            bottom: 15.0,
-                            top: 15.0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 10.0),
-                                child: Text(
-                                  'Interval (Sec.)',
-                                  style: CupertinoTheme.of(context)
-                                      .textTheme
-                                      .pickerTextStyle,
-                                ),
-                              ),
-                              Expanded(
-                                child: CupertinoSlidingSegmentedControl(
-                                  backgroundColor: CupertinoColors.systemGrey2,
-                                  thumbColor: CupertinoTheme.of(context)
-                                          .textTheme
-                                          .tabLabelTextStyle
-                                          .color ??
-                                      CupertinoColors.white,
-                                  // This represents the currently selected segmented control.
-                                  groupValue: _selectedInterval,
-                                  // Callback that sets the selected segmented control.
-                                  onValueChanged: (value) {
-                                    if (value != null) {
-                                      setState(() {
-                                        _selectedInterval = value;
-                                        _advancedOptionsOn = true;
-                                      });
-                                    }
-                                  },
-                                  children: const {
-                                    '30': Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 10),
-                                      child: Text(
-                                        '30',
-                                        style: TextStyle(
-                                          color: CupertinoColors.white,
-                                          fontSize: 14.0,
-                                        ),
-                                      ),
-                                    ),
-                                    '60': Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 10),
-                                      child: Text(
-                                        '60',
-                                        style: TextStyle(
-                                          color: CupertinoColors.white,
-                                          fontSize: 14.0,
-                                        ),
-                                      ),
-                                    ),
-                                    '90': Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 10),
-                                      child: Text(
-                                        '90',
-                                        style: TextStyle(
-                                          color: CupertinoColors.white,
-                                          fontSize: 14.0,
-                                        ),
-                                      ),
-                                    ),
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  )
+                  ),
+                  AdvancedOptions(
+                    advancedOptionsOn: _advancedOptionsOn,
+                    selectedAlgorithm: _selectedAlgorithm,
+                    selectedDigitsCount: _selectedDigitsCount,
+                    selectedInterval: _selectedInterval,
+                    setAdvancedOptions: (bool value) {
+                      setState(() {
+                        _advancedOptionsOn ? resetOptions() : null;
+                        _advancedOptionsOn = !_advancedOptionsOn;
+                      });
+                    },
+                    setAlgorithm: (value) {
+                      setState(() {
+                        _selectedAlgorithm = value;
+                        _advancedOptionsOn = true;
+                      });
+                    },
+                    setDigits: (value) {
+                      setState(() {
+                        _selectedDigitsCount = value;
+                        _advancedOptionsOn = true;
+                      });
+                    },
+                    setPeriod: (value) {
+                      setState(() {
+                        _selectedInterval = value;
+                        _advancedOptionsOn = true;
+                      });
+                    },
+                  ),
                 ],
               ),
             ),
@@ -632,7 +446,7 @@ class _EnterManuallyState extends State<EnterManually> {
   }
 }
 
-class Tile extends StatefulWidget {
+class _Tile extends StatelessWidget {
   final String label;
   final bool leftImage;
   final String leftImgName;
@@ -640,7 +454,7 @@ class Tile extends StatefulWidget {
   final String placeholder;
   final TextEditingController txtController;
 
-  const Tile({
+  const _Tile({
     Key? key,
     required this.bottomBorder,
     required this.label,
@@ -651,16 +465,11 @@ class Tile extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<Tile> createState() => _TileState();
-}
-
-class _TileState extends State<Tile> {
-  @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(top: 9.0, bottom: 12.0, left: 7.0),
       decoration: BoxDecoration(
-        border: widget.bottomBorder
+        border: bottomBorder
             ? Border(
                 bottom: BorderSide(
                   color: CupertinoTheme.of(context)
@@ -675,23 +484,23 @@ class _TileState extends State<Tile> {
       ),
       child: Row(
         children: [
-          widget.leftImage
+          leftImage
               ? Padding(
                   padding: const EdgeInsets.only(right: 10.0),
-                  child: widget.leftImgName == 'account'
+                  child: leftImgName == 'account'
                       ? const Icon(
                           CupertinoIcons.person_crop_circle,
                           size: 45,
                           color: CupertinoColors.secondaryLabel,
                         )
-                      : Image.asset(widget.leftImgName, height: 40, width: 40),
+                      : Image.asset(leftImgName, height: 40, width: 40),
                 )
               : const SizedBox(),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.label,
+                label,
                 style: TextStyle(
                   color: CupertinoTheme.of(context)
                       .textTheme
@@ -705,13 +514,10 @@ class _TileState extends State<Tile> {
                 height: 25,
                 margin: const EdgeInsets.only(top: 5),
                 child: CupertinoTextField(
-                  placeholder: widget.placeholder,
+                  placeholder: placeholder,
                   padding: const EdgeInsets.only(bottom: 2),
-                  decoration: BoxDecoration(
-                    color: CupertinoTheme.of(context).barBackgroundColor,
-                    border: null,
-                  ),
-                  controller: widget.txtController,
+                  decoration: const BoxDecoration(border: null),
+                  controller: txtController,
                   style: CupertinoTheme.of(context).textTheme.textStyle,
                 ),
               ),

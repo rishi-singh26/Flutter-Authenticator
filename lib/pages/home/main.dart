@@ -80,7 +80,7 @@ class _MyHomePageState extends State<MyHomePage> {
     bool isPvKeyAttached,
   ) async {
     if (!isPvKeyAttached) {
-      PickFileResp filePickResp = await FS.pickSingleFile();
+      PickFileResp filePickResp = await FS.pickSingleFile(['pem']);
       if (!filePickResp.status) {
         return;
       }
@@ -130,6 +130,49 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  PullDownButton _buildHeaderPullDownButton() {
+    return PullDownButton(
+      itemBuilder: (context) => [
+        const PullDownMenuTitle(title: Text('Sorting Options')),
+        SelectablePullDownMenuItem(
+          title: 'Newest First',
+          onTap: () => setState(() => _selectedSorting = 0),
+          selected: _selectedSorting == 0,
+          icon: CupertinoIcons.calendar_badge_minus,
+        ),
+        const PullDownMenuDivider(),
+        SelectablePullDownMenuItem(
+          title: 'Oldest First',
+          onTap: () => setState(() => _selectedSorting = 1),
+          selected: _selectedSorting == 1,
+          icon: CupertinoIcons.calendar_badge_plus,
+        ),
+        const PullDownMenuDivider(),
+        SelectablePullDownMenuItem(
+          title: 'Service (A to Z)',
+          selected: _selectedSorting == 3,
+          onTap: () => setState(() => _selectedSorting = 3),
+          icon: CupertinoIcons.text_badge_minus,
+        ),
+        const PullDownMenuDivider(),
+        SelectablePullDownMenuItem(
+          title: 'Service (Z to A)',
+          selected: _selectedSorting == 2,
+          onTap: () => setState(() => _selectedSorting = 2),
+          icon: CupertinoIcons.text_badge_plus,
+        ),
+        // const PullDownMenuDivider.large(),
+      ],
+      position: PullDownMenuPosition.under,
+      buttonBuilder: (context, showMenu) => CupertinoButton(
+        onPressed: showMenu,
+        padding: const EdgeInsets.all(0.0),
+        alignment: Alignment.centerRight,
+        child: const Icon(CupertinoIcons.ellipsis_circle, size: 23),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final String sortingKey = _getSortingKey(_selectedSorting);
@@ -167,47 +210,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                     largeTitle: const Text('Authenticator'),
-                    trailing: PullDownButton(
-                      itemBuilder: (context) => [
-                        const PullDownMenuTitle(title: Text('Sorting Options')),
-                        SelectablePullDownMenuItem(
-                          title: 'Newest First',
-                          onTap: () => setState(() => _selectedSorting = 0),
-                          selected: _selectedSorting == 0,
-                          icon: CupertinoIcons.calendar_badge_minus,
-                        ),
-                        const PullDownMenuDivider(),
-                        SelectablePullDownMenuItem(
-                          title: 'Oldest First',
-                          onTap: () => setState(() => _selectedSorting = 1),
-                          selected: _selectedSorting == 1,
-                          icon: CupertinoIcons.calendar_badge_plus,
-                        ),
-                        const PullDownMenuDivider(),
-                        SelectablePullDownMenuItem(
-                          title: 'Service (A to Z)',
-                          selected: _selectedSorting == 3,
-                          onTap: () => setState(() => _selectedSorting = 3),
-                          icon: CupertinoIcons.text_badge_minus,
-                        ),
-                        const PullDownMenuDivider(),
-                        SelectablePullDownMenuItem(
-                          title: 'Service (Z to A)',
-                          selected: _selectedSorting == 2,
-                          onTap: () => setState(() => _selectedSorting = 2),
-                          icon: CupertinoIcons.text_badge_plus,
-                        ),
-                        // const PullDownMenuDivider.large(),
-                      ],
-                      position: PullDownMenuPosition.under,
-                      buttonBuilder: (context, showMenu) => CupertinoButton(
-                        onPressed: showMenu,
-                        padding: const EdgeInsets.all(0.0),
-                        alignment: Alignment.centerRight,
-                        child: const Icon(CupertinoIcons.ellipsis_circle,
-                            size: 23),
-                      ),
-                    ),
+                    trailing: _buildHeaderPullDownButton(),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
@@ -265,22 +268,6 @@ class _MyHomePageState extends State<MyHomePage> {
                             itemCount: accounts.length,
                             itemBuilder: (context, index) {
                               if (isPVKeyAvailable) {
-                                // TotpAccntCryptoResp decryptedData =
-                                //     accounts[index].decrypt(
-                                //         RSAPrivateKey.fromPEM(state.pvKey.key));
-                                // if (!decryptedData.status) {
-                                //   return RenderAccountLocked(
-                                //     accountData: accounts[index],
-                                //     onPressed: () => _showAlertDilogue(
-                                //       'Alert!',
-                                //       'An error occured while decryption!',
-                                //       () => null,
-                                //     ),
-                                //     isTopElement: index == 0,
-                                //     isBottomElement:
-                                //         index == accounts.length - 1,
-                                //   );
-                                // }
                                 return RenderAccountLocked(
                                   accountData: accounts[index],
                                   onPressed: () => _showOTPBox(context,
@@ -288,11 +275,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                   isTopElement: index == 0,
                                   isBottomElement: index == accounts.length - 1,
                                 );
-                                // return RenderAccount(
-                                //   accountData: decryptedData.data,
-                                //   isTopElement: index == 0,
-                                //   isBottomElement: index == accounts.length - 1,
-                                // );
                               }
                               return RenderAccountLocked(
                                 accountData: accounts[index],

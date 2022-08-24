@@ -7,10 +7,14 @@ class BottomContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: CupertinoTheme.of(context).barBackgroundColor,
       alignment: Alignment.center,
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 10.0),
+      decoration: BoxDecoration(
+        color: CupertinoTheme.of(context).barBackgroundColor,
+        border: const Border(
+          top: BorderSide(width: 0.1, color: CupertinoColors.separator),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(
         vertical: 10.0,
         horizontal: 15.0,

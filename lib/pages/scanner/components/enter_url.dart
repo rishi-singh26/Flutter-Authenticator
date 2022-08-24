@@ -12,11 +12,15 @@ class EnterUrl extends StatefulWidget {
 }
 
 class _EnterUrlState extends State<EnterUrl> {
+  bool _showLoader = false;
+  _setLoader(bool val) => setState(() => _showLoader = val);
+
   late TextEditingController urlController;
 
   @override
   void initState() {
     urlController = TextEditingController();
+    urlController.addListener(() => setState(() {}));
     super.initState();
   }
 
@@ -46,6 +50,7 @@ class _EnterUrlState extends State<EnterUrl> {
 
   _onSubmit(BuildContext context) async {
     try {
+      _setLoader(true);
       String url = urlController.text;
       final Uri uriComponents = Uri.parse(url);
       if (uriComponents.isScheme('otpauth')) {
@@ -55,15 +60,18 @@ class _EnterUrlState extends State<EnterUrl> {
           () => null,
         );
         if (!addAccountResp.status) {
+          _setLoader(false);
           _showDilogue(context, 'Alert!', addAccountResp.message, true);
           return;
         }
         Navigator.canPop(context) ? Navigator.pop(context) : null;
       } else {
+        _setLoader(false);
         _showDilogue(context, 'Alert!', 'Enter valid url', true);
         return;
       }
     } catch (e) {
+      _setLoader(false);
       _showDilogue(context, 'Alert!', e.toString(), true);
       return;
     }
@@ -141,6 +149,11 @@ class _EnterUrlState extends State<EnterUrl> {
                   Padding(
                     padding: const EdgeInsets.all(30.0),
                     child: CupertinoButton.filled(
+                      onPressed: _showLoader || urlController.text.isEmpty
+                          ? null
+                          : () {
+                              _onSubmit(context);
+                            },
                       child: const Text(
                         'Continue',
                         style: TextStyle(
@@ -149,12 +162,6 @@ class _EnterUrlState extends State<EnterUrl> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      onPressed: () {
-                        if (urlController.text.isEmpty) {
-                          return;
-                        }
-                        _onSubmit(context);
-                      },
                     ),
                   ),
                 ],

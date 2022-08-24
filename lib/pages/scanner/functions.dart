@@ -44,6 +44,10 @@ Future<AddAccountResp> addAccountToFirebase(
         ? uri.queryParameters['period'].toString()
         : '30';
 
+    if (secret == '') {
+      return const AddAccountResp(message: 'Inavalid secret', status: false);
+    }
+
     TotpAccount account = TotpAccount(
       createdOn: DateTime.now(),
       data: TotpAccountDetail(
@@ -54,10 +58,11 @@ Future<AddAccountResp> addAccountToFirebase(
         protocol: protocol,
         secret: secret.toUpperCase(),
         tags: [],
-        url: result,
+        url:
+            'otpauth://totp/$name?issuer=$issuer&secret=${secret.toUpperCase()}&period=$period&digits=$digits&algorithm=$algorithm',
       ),
       id: 'id',
-      name: issuer.toUpperCase(),
+      name: issuer,
       userId: FirebaseAuth.instance.currentUser?.uid ?? '',
       options: TotpOptions(
         isEnabled: false,
@@ -67,6 +72,8 @@ Future<AddAccountResp> addAccountToFirebase(
       ),
       isFavourite: false,
     );
+    // print(uri);
+    // print(account.data.url);
     TotpAccntCryptoResp encryptedAccount = account.encrypt(
       RSAPublicKey.fromPEM(store.state.auth.userData.publicKey),
     );

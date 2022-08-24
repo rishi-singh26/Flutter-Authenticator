@@ -14,6 +14,17 @@ class FS {
     }
   }
 
+  static Future<ReadFileAsLineResp> readFileLines(File file) async {
+    try {
+      // Read the file
+      final contents = await file.readAsLines();
+      return ReadFileAsLineResp(contents: contents, status: true);
+    } catch (e) {
+      // If encountering an error, return 0
+      return ReadFileAsLineResp(contents: [], status: false);
+    }
+  }
+
   static Future<WriteFileResp> writeFileContents(File file, String text) async {
     // Write the file
     try {
@@ -24,9 +35,16 @@ class FS {
     }
   }
 
-  static Future<PickFileResp> pickSingleFile() async {
+  static Future<PickFileResp> pickSingleFile(
+      [List<String> allowedExtns = const []]) async {
+    // allowedExtensions: ['jpg', 'pdf', 'doc']
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles();
+      FilePickerResult? result = allowedExtns.isEmpty
+          ? await FilePicker.platform.pickFiles()
+          : await FilePicker.platform.pickFiles(
+              type: FileType.custom,
+              allowedExtensions: allowedExtns,
+            );
       // print(result.toString());
       if (result != null) {
         File file = File(result.files.single.path ?? '');
@@ -57,6 +75,12 @@ class ReadFileResp {
   final String contents;
   final bool status;
   ReadFileResp({required this.contents, required this.status});
+}
+
+class ReadFileAsLineResp {
+  final List<String> contents;
+  final bool status;
+  ReadFileAsLineResp({required this.contents, required this.status});
 }
 
 class WriteFileResp {

@@ -1,7 +1,6 @@
 import 'package:authenticator/modals/totp_acc_modal.dart';
-import 'package:authenticator/redux/combined_store.dart';
 import 'package:authenticator/redux/store/app.state.dart';
-import 'package:authenticator/shared/components/custom_activity_indicator.dart';
+import 'package:authenticator/shared/functions/main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypton/crypton.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,7 +8,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Scaffold;
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:redux/redux.dart';
 
 class ExportAccounts extends StatefulWidget {
   const ExportAccounts({Key? key}) : super(key: key);
@@ -19,53 +17,10 @@ class ExportAccounts extends StatefulWidget {
 }
 
 class _ExportAccountsState extends State<ExportAccounts> {
-  List<TotpAccount> accounts = [];
-
-  bool _isLoading = true;
-  _setLoading(bool val) {
-    setState(() => _isLoading = val);
-  }
-
   TextStyle stepsStyle(BuildContext context) => CupertinoTheme.of(context)
       .textTheme
       .tabLabelTextStyle
       .copyWith(fontSize: 14);
-
-  _getAccounts() async {
-    try {
-      Store<AppState> store = await AppStore.getAppStore();
-
-      List<TotpAccount> accountsData = [];
-      QuerySnapshot<Map<String, dynamic>> farmersStream =
-          await FirebaseFirestore.instance
-              .collection('newTotpAccounts')
-              .where(
-                'userId',
-                isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '',
-              )
-              .orderBy('name')
-              .get();
-
-      for (QueryDocumentSnapshot<Map<String, dynamic>> element
-          in farmersStream.docs) {
-        TotpAccntCryptoResp totpAccntCryptoResp =
-            TotpAccount.fromJson(element.data(), element.id).decrypt(
-          RSAPrivateKey.fromPEM(store.state.pvKey.key),
-        );
-        if (!totpAccntCryptoResp.status) {
-          continue;
-        }
-        accountsData.add(totpAccntCryptoResp.data);
-      }
-      setState(() {
-        accounts = accountsData;
-        _isLoading = false;
-      });
-    } catch (e) {
-      _showAlert(context, e.toString());
-      _setLoading(false);
-    }
-  }
 
   _showAlert(BuildContext context, String content, {String header = 'Alert!'}) {
     showCupertinoDialog(
@@ -86,16 +41,24 @@ class _ExportAccountsState extends State<ExportAccounts> {
     );
   }
 
-  _showQRBox(BuildContext context, String issuer, String name, String url) {
+  _showQRBox(BuildContext context, TotpAccount account, AppState state) {
+    TotpAccntCryptoResp totpAccntCryptoResp =
+        account.decrypt(RSAPrivateKey.fromPEM(state.pvKey.key));
+
+    if (!totpAccntCryptoResp.status) {
+      _showAlert(context, totpAccntCryptoResp.message);
+      return;
+    }
+    final TotpAccount decrypedAccount = totpAccntCryptoResp.data;
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: Text(issuer),
+        title: Text(decrypedAccount.data.issuer),
         content: Column(
           children: [
             Text(
               Uri.decodeComponent(
-                (name).split(':').last,
+                (decrypedAccount.data.name).split(':').last,
               ),
               style: CupertinoTheme.of(context)
                   .textTheme
@@ -103,17 +66,17 @@ class _ExportAccountsState extends State<ExportAccounts> {
                   .copyWith(fontSize: 14),
             ),
             Container(
-              width: 250,
-              height: 250,
+              width: 230,
+              height: 230,
               margin: const EdgeInsets.only(top: 20),
               decoration: const BoxDecoration(
                 borderRadius: BorderRadius.all(Radius.circular(8.0)),
                 color: CupertinoColors.white,
               ),
               child: QrImage(
-                data: url,
+                data: decrypedAccount.data.url,
                 version: QrVersions.auto,
-                size: 240,
+                size: 100,
                 errorStateBuilder: (cxt, err) {
                   return const Center(
                     child: Text(
@@ -158,17 +121,19 @@ class _ExportAccountsState extends State<ExportAccounts> {
   // }
 
   @override
-  void initState() {
-    _getAccounts();
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    Stream<QuerySnapshot> accountsStream = FirebaseFirestore.instance
+        .collection('newTotpAccounts')
+        .where(
+          'userId',
+          isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '',
+        )
+        .orderBy('name')
+        .snapshots();
     return Scaffold(
       body: StoreConnector<AppState, AppState>(
         converter: (store) => store.state,
-        builder: (context, store) {
+        builder: (context, state) {
           return CupertinoPageScaffold(
             child: NestedScrollView(
               headerSliverBuilder: ((context, innerBoxIsScrolled) {
@@ -179,9 +144,40 @@ class _ExportAccountsState extends State<ExportAccounts> {
                   ),
                 ];
               }),
-              body: Stack(
-                children: [
-                  ListView(
+              body: StreamBuilder<QuerySnapshot>(
+                stream: accountsStream,
+                builder: (
+                  BuildContext context,
+                  AsyncSnapshot<QuerySnapshot> snapshot,
+                ) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                          "Something went wrong ${snapshot.error.toString()}"),
+                    );
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CupertinoActivityIndicator());
+                  }
+                  if (snapshot.hasData && snapshot.data?.docs.isEmpty == null) {
+                    return const Center(child: Text("Document does not exist"));
+                  }
+                  if (snapshot.data!.docs.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 15.0),
+                      child: Text('No Accounts available'),
+                    );
+                  }
+                  List<TotpAccount> accounts =
+                      snapshot.data!.docs.map((DocumentSnapshot doc) {
+                    Map<String, dynamic> data =
+                        doc.data()! as Map<String, dynamic>;
+                    TotpAccount account = TotpAccount.fromJson(data, doc.id);
+                    return account;
+                  }).toList();
+
+                  return ListView(
+                    padding: EdgeInsets.zero,
                     children: [
                       // Padding(
                       //   padding: const EdgeInsets.only(left: 20, bottom: 5),
@@ -291,8 +287,8 @@ class _ExportAccountsState extends State<ExportAccounts> {
                       //   onPress: () {},
                       // ),
                       Padding(
-                        padding:
-                            const EdgeInsets.only(left: 20, bottom: 5, top: 15),
+                        padding: const EdgeInsets.only(
+                            left: 20, bottom: 10, top: 10),
                         child: Text(
                           'Export each account individually',
                           style: CupertinoTheme.of(context)
@@ -302,7 +298,7 @@ class _ExportAccountsState extends State<ExportAccounts> {
                         ),
                       ),
                       for (TotpAccount element in accounts)
-                        Tile(
+                        _Tile(
                           title: element.data.issuer,
                           subtitle: Uri.decodeComponent(
                             (element.data.name).split(':').last,
@@ -317,24 +313,12 @@ class _ExportAccountsState extends State<ExportAccounts> {
                                   .color ??
                               CupertinoColors.systemBlue,
                           onPress: () {
-                            _showQRBox(context, element.data.issuer,
-                                element.data.name, element.data.url);
+                            _showQRBox(context, element, state);
                           },
                         )
                     ],
-                  ),
-                  if (_isLoading)
-                    CustomActivityIndicator(
-                      content: Text(
-                        'Loading Accounts',
-                        style: CupertinoTheme.of(context)
-                            .textTheme
-                            .navTitleTextStyle,
-                      ),
-                    )
-                  else
-                    const SizedBox(),
-                ],
+                  );
+                },
               ),
             ),
           );
@@ -344,7 +328,7 @@ class _ExportAccountsState extends State<ExportAccounts> {
   }
 }
 
-class Tile extends StatelessWidget {
+class _Tile extends StatelessWidget {
   final String title;
   final String subtitle;
   final Function() onPress;
@@ -352,7 +336,7 @@ class Tile extends StatelessWidget {
   final bool isLast;
   final IconData icon;
   final Color iconColor;
-  const Tile({
+  const _Tile({
     Key? key,
     this.subtitle = '',
     required this.title,
@@ -365,10 +349,11 @@ class Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String imageName = getImageName(title);
     return GestureDetector(
       onTap: onPress,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15),
+        padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 15),
         margin: const EdgeInsets.symmetric(horizontal: 12.0),
         decoration: BoxDecoration(
           color: CupertinoTheme.of(context).barBackgroundColor,
@@ -383,29 +368,47 @@ class Tile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+                Padding(
+                  padding: const EdgeInsets.only(right: 15),
+                  child: imageName == 'account'
+                      ? const Icon(
+                          CupertinoIcons.person_crop_circle,
+                          size: 35,
+                          // color: CupertinoColors.placeholderText,
+                          color: CupertinoColors.secondaryLabel,
+                        )
+                      : Image.asset(imageName, height: 35, width: 35),
                 ),
-                subtitle.isEmpty
-                    ? const SizedBox()
-                    : SizedBox(
-                        width: 220,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(
-                            subtitle,
-                            maxLines: 2,
-                            style: CupertinoTheme.of(context)
-                                .textTheme
-                                .tabLabelTextStyle
-                                .copyWith(fontSize: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: CupertinoTheme.of(context)
+                          .textTheme
+                          .navTitleTextStyle,
+                    ),
+                    subtitle.isEmpty
+                        ? const SizedBox()
+                        : SizedBox(
+                            width: 220,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                subtitle,
+                                maxLines: 2,
+                                style: CupertinoTheme.of(context)
+                                    .textTheme
+                                    .tabLabelTextStyle
+                                    .copyWith(fontSize: 14),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                  ],
+                ),
               ],
             ),
             Icon(icon, size: 20, color: iconColor),
