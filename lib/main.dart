@@ -4,7 +4,7 @@ import 'package:authenticator/pages/authentication/login.dart';
 import 'package:authenticator/pages/home/main.dart';
 // Firebase
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:authenticator/firebase_options.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // Redux

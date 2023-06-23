@@ -18,8 +18,8 @@ class CustomActivityIndicator extends StatelessWidget {
         children: [
           CupertinoAlertDialog(
             title: content,
-            content: Column(
-              children: const [
+            content: const Column(
+              children: [
                 SizedBox(height: 20.0),
                 CupertinoActivityIndicator(),
               ],

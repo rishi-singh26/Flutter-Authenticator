@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:authenticator/modals/otp_modal.dart';
 import 'package:authenticator/modals/totp_acc_modal.dart';
 import 'package:authenticator/shared/functions/main.dart';
@@ -27,8 +25,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
 
   getOtp() {
     try {
-      String accountSecret =
-          stripSpaces(widget.accountData.data.secret.toUpperCase());
+      String accountSecret = stripSpaces(widget.accountData.data.secret.toUpperCase());
       // final code = otp.OTP.generateTOTPCodeString(
       otp.OTP.generateTOTPCodeString(
         accountSecret,
@@ -68,10 +65,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
             Uri.decodeComponent(
               (widget.accountData.data.name).split(':').last,
             ),
-            style: CupertinoTheme.of(context)
-                .textTheme
-                .tabLabelTextStyle
-                .copyWith(fontSize: 14),
+            style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 14),
           ),
           Padding(
             padding: const EdgeInsets.only(top: 30, bottom: 15),
@@ -90,11 +84,10 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
                   // ringColor: CupertinoTheme.of(context).barBackgroundColor,
                   fillColor: const Color(0xFF2dcc70),
                   strokeWidth: 3.5,
-                  textStyle:
-                      CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  textStyle: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                   textFormat: CountdownTextFormat.S,
                   isReverse: true,
                   isReverseAnimation: true,
@@ -107,12 +100,11 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
                 const SizedBox(width: 20),
                 Text(
                   splitStringInHalf(otpData.otp),
-                  style:
-                      CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                            fontSize: 27,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2.0,
-                          ),
+                  style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                        fontSize: 27,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2.0,
+                      ),
                 ),
               ],
             ),
@@ -123,8 +115,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
         CupertinoDialogAction(
           isDestructiveAction: true,
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: otpData.otp))
-                .then((_) => null);
+            Clipboard.setData(ClipboardData(text: otpData.otp)).then((_) => null);
           },
           child: const Text('Copy'),
         ),

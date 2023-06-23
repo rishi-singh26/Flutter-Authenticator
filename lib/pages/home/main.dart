@@ -26,8 +26,7 @@ class _MyHomePageState extends State<MyHomePage> {
   List<TotpAccount> totpAccounts = [];
   final TextEditingController _searchController = TextEditingController();
 
-  int _selectedSorting =
-      0; // 0 => Newest first, 1 => Oldest first, 2 => Alphabetical desc, 3 => Alphabetical asc
+  int _selectedSorting = 0; // 0 => Newest first, 1 => Oldest first, 2 => Alphabetical desc, 3 => Alphabetical asc
 
   _showAlertDilogue(String title, String message, Function onPress) {
     return showCupertinoDialog(
@@ -89,8 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
         return;
       }
       // ignore: use_build_context_synchronously
-      StoreProvider.of<AppState>(topLevelContext)
-          .dispatch(AttachKeyAction(key: readFileResp.contents));
+      StoreProvider.of<AppState>(topLevelContext).dispatch(AttachKeyAction(key: readFileResp.contents));
     } else {
       StoreProvider.of<AppState>(topLevelContext).dispatch(DetachKeyAction());
     }
@@ -117,11 +115,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _showOTPBox(BuildContext context, TotpAccount account, String key) {
-    TotpAccntCryptoResp decryptedData =
-        account.decrypt(RSAPrivateKey.fromPEM(key));
+    TotpAccntCryptoResp decryptedData = account.decrypt(RSAPrivateKey.fromPEM(key));
     if (!decryptedData.status) {
-      _showAlertDilogue(
-          'Alert!', 'An error occured while decryption!', () => null);
+      _showAlertDilogue('Alert!', 'An error occured while decryption!', () => null);
       return;
     }
     return showCupertinoDialog(
@@ -134,28 +130,25 @@ class _MyHomePageState extends State<MyHomePage> {
     return PullDownButton(
       itemBuilder: (context) => [
         const PullDownMenuTitle(title: Text('Sorting Options')),
-        SelectablePullDownMenuItem(
+        PullDownMenuItem.selectable(
           title: 'Newest First',
           onTap: () => setState(() => _selectedSorting = 0),
           selected: _selectedSorting == 0,
           icon: CupertinoIcons.calendar_badge_minus,
         ),
-        const PullDownMenuDivider(),
-        SelectablePullDownMenuItem(
+        PullDownMenuItem.selectable(
           title: 'Oldest First',
           onTap: () => setState(() => _selectedSorting = 1),
           selected: _selectedSorting == 1,
           icon: CupertinoIcons.calendar_badge_plus,
         ),
-        const PullDownMenuDivider(),
-        SelectablePullDownMenuItem(
+        PullDownMenuItem.selectable(
           title: 'Service (A to Z)',
           selected: _selectedSorting == 3,
           onTap: () => setState(() => _selectedSorting = 3),
           icon: CupertinoIcons.text_badge_minus,
         ),
-        const PullDownMenuDivider(),
-        SelectablePullDownMenuItem(
+        PullDownMenuItem.selectable(
           title: 'Service (Z to A)',
           selected: _selectedSorting == 2,
           onTap: () => setState(() => _selectedSorting = 2),
@@ -163,7 +156,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         // const PullDownMenuDivider.large(),
       ],
-      position: PullDownMenuPosition.under,
+      position: PullDownMenuPosition.automatic,
       buttonBuilder: (context, showMenu) => CupertinoButton(
         onPressed: showMenu,
         padding: const EdgeInsets.all(0.0),
@@ -205,8 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: Icon(
                         CupertinoIcons.settings,
                         size: 23,
-                        color:
-                            isPVKeyAvailable ? null : CupertinoColors.systemRed,
+                        color: isPVKeyAvailable ? null : CupertinoColors.systemRed,
                       ),
                     ),
                     largeTitle: const Text('Authenticator'),
@@ -214,8 +206,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8.0, horizontal: 15.0),
+                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 15.0),
                       child: CupertinoSearchTextField(
                         controller: _searchController,
                       ),
@@ -234,19 +225,14 @@ class _MyHomePageState extends State<MyHomePage> {
                       ) {
                         if (snapshot.hasError) {
                           return Center(
-                            child: Text(
-                                "Something went wrong ${snapshot.error.toString()}"),
+                            child: Text("Something went wrong ${snapshot.error.toString()}"),
                           );
                         }
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CupertinoActivityIndicator());
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CupertinoActivityIndicator());
                         }
-                        if (snapshot.hasData &&
-                            snapshot.data?.docs.isEmpty == null) {
-                          return const Center(
-                              child: Text("Document does not exist"));
+                        if (snapshot.hasData && snapshot.data?.docs.isEmpty == null) {
+                          return const Center(child: Text("Document does not exist"));
                         }
                         if (snapshot.data!.docs.isEmpty) {
                           return const Padding(
@@ -254,12 +240,9 @@ class _MyHomePageState extends State<MyHomePage> {
                             child: Text('No Accounts available'),
                           );
                         }
-                        List<TotpAccount> accounts =
-                            snapshot.data!.docs.map((DocumentSnapshot doc) {
-                          Map<String, dynamic> data =
-                              doc.data()! as Map<String, dynamic>;
-                          TotpAccount account =
-                              TotpAccount.fromJson(data, doc.id);
+                        List<TotpAccount> accounts = snapshot.data!.docs.map((DocumentSnapshot doc) {
+                          Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
+                          TotpAccount account = TotpAccount.fromJson(data, doc.id);
                           return account;
                         }).toList();
                         return SlidableAutoCloseBehavior(
@@ -270,8 +253,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               if (isPVKeyAvailable) {
                                 return RenderAccountLocked(
                                   accountData: accounts[index],
-                                  onPressed: () => _showOTPBox(context,
-                                      accounts[index], state.pvKey.key),
+                                  onPressed: () => _showOTPBox(context, accounts[index], state.pvKey.key),
                                   isTopElement: index == 0,
                                   isBottomElement: index == accounts.length - 1,
                                 );
@@ -281,8 +263,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                 onPressed: () => _showAlertDilogue(
                                   'Alert!',
                                   'Private Key not attached.\nDo you wnat to attach Private Key?',
-                                  () => _attachOrDetackPVKey(
-                                      context, isPVKeyAvailable),
+                                  () => _attachOrDetackPVKey(context, isPVKeyAvailable),
                                 ),
                                 isTopElement: index == 0,
                                 isBottomElement: index == accounts.length - 1,

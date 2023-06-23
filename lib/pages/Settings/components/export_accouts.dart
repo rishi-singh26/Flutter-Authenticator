@@ -9,6 +9,9 @@ import 'package:flutter/material.dart' show Scaffold;
 import 'package:flutter_redux/flutter_redux.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import 'dart:async';
+import 'dart:ui' as ui;
+
 class ExportAccounts extends StatefulWidget {
   const ExportAccounts({Key? key}) : super(key: key);
 
@@ -17,10 +20,7 @@ class ExportAccounts extends StatefulWidget {
 }
 
 class _ExportAccountsState extends State<ExportAccounts> {
-  TextStyle stepsStyle(BuildContext context) => CupertinoTheme.of(context)
-      .textTheme
-      .tabLabelTextStyle
-      .copyWith(fontSize: 14);
+  TextStyle stepsStyle(BuildContext context) => CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 14);
 
   _showAlert(BuildContext context, String content, {String header = 'Alert!'}) {
     showCupertinoDialog(
@@ -42,14 +42,46 @@ class _ExportAccountsState extends State<ExportAccounts> {
   }
 
   _showQRBox(BuildContext context, TotpAccount account, AppState state) {
-    TotpAccntCryptoResp totpAccntCryptoResp =
-        account.decrypt(RSAPrivateKey.fromPEM(state.pvKey.key));
+    TotpAccntCryptoResp totpAccntCryptoResp = account.decrypt(RSAPrivateKey.fromPEM(state.pvKey.key));
 
     if (!totpAccntCryptoResp.status) {
       _showAlert(context, totpAccntCryptoResp.message);
       return;
     }
     final TotpAccount decrypedAccount = totpAccntCryptoResp.data;
+
+    // Future<ui.Image> loadOverlayImage() async {
+    //   final Completer<ui.Image> completer = Completer<ui.Image>();
+    //   final ByteData byteData = await rootBundle.load('assets/images/4.0x/logo_yakka.png');
+    //   ui.decodeImageFromList(byteData.buffer.asUint8List(), completer.complete);
+    //   return completer.future;
+    // }
+
+    final FutureBuilder<ui.Image> qrFutureBuilder = FutureBuilder<ui.Image>(
+      // future: loadOverlayImage(),
+      builder: (BuildContext ctx, AsyncSnapshot<ui.Image> snapshot) {
+        const double size = 280.0;
+        if (!snapshot.hasData) {
+          return const SizedBox(width: size, height: size);
+        }
+        return CustomPaint(
+          size: const Size.square(size),
+          painter: QrPainter(
+            data: decrypedAccount.data.url,
+            version: QrVersions.auto,
+            eyeStyle: const QrEyeStyle(
+              eyeShape: QrEyeShape.square,
+              color: Color(0xff128760),
+            ),
+            dataModuleStyle: const QrDataModuleStyle(
+              dataModuleShape: QrDataModuleShape.circle,
+              color: Color(0xff1a5441),
+            ),
+          ),
+        );
+      },
+    );
+
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -60,10 +92,7 @@ class _ExportAccountsState extends State<ExportAccounts> {
               Uri.decodeComponent(
                 (decrypedAccount.data.name).split(':').last,
               ),
-              style: CupertinoTheme.of(context)
-                  .textTheme
-                  .tabLabelTextStyle
-                  .copyWith(fontSize: 14),
+              style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 14),
             ),
             Container(
               width: 230,
@@ -73,19 +102,7 @@ class _ExportAccountsState extends State<ExportAccounts> {
                 borderRadius: BorderRadius.all(Radius.circular(8.0)),
                 color: CupertinoColors.white,
               ),
-              child: QrImage(
-                data: decrypedAccount.data.url,
-                version: QrVersions.auto,
-                size: 100,
-                errorStateBuilder: (cxt, err) {
-                  return const Center(
-                    child: Text(
-                      "Uh oh! Something went wrong...",
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                },
-              ),
+              child: qrFutureBuilder,
             ),
           ],
         ),
@@ -152,8 +169,7 @@ class _ExportAccountsState extends State<ExportAccounts> {
                 ) {
                   if (snapshot.hasError) {
                     return Center(
-                      child: Text(
-                          "Something went wrong ${snapshot.error.toString()}"),
+                      child: Text("Something went wrong ${snapshot.error.toString()}"),
                     );
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -168,10 +184,8 @@ class _ExportAccountsState extends State<ExportAccounts> {
                       child: Text('No Accounts available'),
                     );
                   }
-                  List<TotpAccount> accounts =
-                      snapshot.data!.docs.map((DocumentSnapshot doc) {
-                    Map<String, dynamic> data =
-                        doc.data()! as Map<String, dynamic>;
+                  List<TotpAccount> accounts = snapshot.data!.docs.map((DocumentSnapshot doc) {
+                    Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
                     TotpAccount account = TotpAccount.fromJson(data, doc.id);
                     return account;
                   }).toList();
@@ -287,14 +301,10 @@ class _ExportAccountsState extends State<ExportAccounts> {
                       //   onPress: () {},
                       // ),
                       Padding(
-                        padding: const EdgeInsets.only(
-                            left: 20, bottom: 10, top: 10),
+                        padding: const EdgeInsets.only(left: 20, bottom: 10, top: 10),
                         child: Text(
                           'Export each account individually',
-                          style: CupertinoTheme.of(context)
-                              .textTheme
-                              .tabLabelTextStyle
-                              .copyWith(fontSize: 12),
+                          style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 12),
                         ),
                       ),
                       for (TotpAccount element in accounts)
@@ -304,14 +314,9 @@ class _ExportAccountsState extends State<ExportAccounts> {
                             (element.data.name).split(':').last,
                           ),
                           isFirst: accounts.indexOf(element) == 0,
-                          isLast:
-                              accounts.indexOf(element) == accounts.length - 1,
+                          isLast: accounts.indexOf(element) == accounts.length - 1,
                           icon: CupertinoIcons.share,
-                          iconColor: CupertinoTheme.of(context)
-                                  .textTheme
-                                  .textStyle
-                                  .color ??
-                              CupertinoColors.systemBlue,
+                          iconColor: CupertinoTheme.of(context).textTheme.textStyle.color ?? CupertinoColors.systemBlue,
                           onPress: () {
                             _showQRBox(context, element, state);
                           },
@@ -387,9 +392,7 @@ class _Tile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: CupertinoTheme.of(context)
-                          .textTheme
-                          .navTitleTextStyle,
+                      style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
                     ),
                     subtitle.isEmpty
                         ? const SizedBox()
@@ -400,10 +403,7 @@ class _Tile extends StatelessWidget {
                               child: Text(
                                 subtitle,
                                 maxLines: 2,
-                                style: CupertinoTheme.of(context)
-                                    .textTheme
-                                    .tabLabelTextStyle
-                                    .copyWith(fontSize: 14),
+                                style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 14),
                               ),
                             ),
                           ),
