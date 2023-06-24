@@ -15,27 +15,6 @@ import 'package:url_launcher/url_launcher.dart';
 class Settings extends StatelessWidget {
   const Settings({Key? key}) : super(key: key);
 
-  _attachOrDetackPVKey(
-    BuildContext topLevelContext,
-    bool isPvKeyAttached,
-  ) async {
-    if (!isPvKeyAttached) {
-      PickFileResp filePickResp = await FS.pickSingleFile(['pem']);
-      if (!filePickResp.status) {
-        return;
-      }
-      ReadFileResp readFileResp = await FS.readFileContents(filePickResp.file);
-      if (!readFileResp.status) {
-        return;
-      }
-      // ignore: use_build_context_synchronously
-      StoreProvider.of<AppState>(topLevelContext)
-          .dispatch(AttachKeyAction(key: readFileResp.contents));
-    } else {
-      StoreProvider.of<AppState>(topLevelContext).dispatch(DetachKeyAction());
-    }
-  }
-
   _showAlert(BuildContext context, String content, {String header = 'Alert!'}) {
     showCupertinoDialog(
       context: context,
@@ -90,10 +69,7 @@ class Settings extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'Version: 1.0.0+1',
-              style: CupertinoTheme.of(context)
-                  .textTheme
-                  .tabLabelTextStyle
-                  .copyWith(fontSize: 14),
+              style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(fontSize: 14),
             ),
             const SizedBox(height: 10),
             Text(
@@ -103,8 +79,7 @@ class Settings extends StatelessWidget {
             const SizedBox(height: 10),
           ],
         ),
-        content: const Text(
-            'An open-source app with end to end encryption for privacy and security.'),
+        content: const Text('An open-source app with end to end encryption for privacy and security.'),
         actions: <CupertinoDialogAction>[
           CupertinoDialogAction(
             onPressed: () {
@@ -120,8 +95,7 @@ class Settings extends StatelessWidget {
           ),
           CupertinoDialogAction(
             onPressed: () async {
-              final Uri url = Uri.parse(
-                  'https://github.com/rishi-singh26/Flutter-Authenticator');
+              final Uri url = Uri.parse('https://github.com/rishi-singh26/Flutter-Authenticator');
               if (!await launchUrl(url)) {
                 return;
               }
@@ -153,8 +127,7 @@ class Settings extends StatelessWidget {
       return;
     }
     String pbKeyFilePath = '${dirResp.path}/$filename.pem';
-    WriteFileResp writeFileResp =
-        await FS.writeFileContents(File(pbKeyFilePath), key);
+    WriteFileResp writeFileResp = await FS.writeFileContents(File(pbKeyFilePath), key);
     if (!writeFileResp.status) {
       // ignore: use_build_context_synchronously
       _showAlert(
@@ -187,6 +160,7 @@ class Settings extends StatelessWidget {
               StoreProvider.of<AppState>(context).dispatch(LogoutAction());
               StoreProvider.of<AppState>(context).dispatch(DetachKeyAction());
               FirebaseAuth.instance.signOut();
+              Navigator.canPop(context) ? Navigator.pop(context) : null;
             },
             child: const Text('Ok'),
           ),
@@ -206,8 +180,7 @@ class Settings extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color iconColor = CupertinoTheme.of(context).textTheme.textStyle.color ??
-        CupertinoColors.white;
+    Color iconColor = CupertinoTheme.of(context).textTheme.textStyle.color ?? CupertinoColors.white;
     return StoreConnector<AppState, AppState>(
       converter: (store) => store.state,
       builder: (context, store) {
@@ -226,43 +199,30 @@ class Settings extends StatelessWidget {
             body: ListView(
               padding: const EdgeInsets.only(top: 20),
               children: [
-                _Tile(
-                  title: isPvKeyAttached
-                      ? 'Detach Private Key'
-                      : 'Attach Private Key',
-                  subtitle: isPvKeyAttached
-                      ? 'Remove private key from the app, OTPs will not be available.'
-                      : 'Add Private Key to decryptd your data and get OTPs',
-                  onPress: () => _attachOrDetackPVKey(context, isPvKeyAttached),
-                  isFirst: true,
-                  icon: Icons.attachment_outlined,
-                  iconColor: iconColor,
-                ),
-                if (!isPvKeyAttached)
-                  const SizedBox()
-                else
-                  _Tile(
-                    title: 'Download Private Key',
-                    subtitle:
-                        'This feature is helpful in scenearios where you attach the private key and delete it from your device.',
-                    onPress: () => _downloadKeyFile(
-                      context,
-                      store.pvKey.key,
-                      'PrivateKey_${store.auth.userData.userId}',
-                    ),
-                    icon: CupertinoIcons.download_circle,
-                    iconColor: iconColor,
-                  ),
+                // if (!isPvKeyAttached)
+                //   const SizedBox()
+                // else
+                //   _Tile(
+                //     title: 'Download Private Key',
+                //     subtitle: 'This feature is helpful in scenearios where you attach the private key and delete it from your device.',
+                //     onPress: () => _downloadKeyFile(
+                //       context,
+                //       store.pvKey.key,
+                //       'PrivateKey_${store.auth.userData.userId}',
+                //     ),
+                //     icon: CupertinoIcons.download_circle,
+                //     iconColor: iconColor,
+                //   ),
                 _Tile(
                   title: 'Downolad Public Key',
-                  subtitle:
-                      'You can always download your private key because we save a copy ot it with us.',
+                  subtitle: 'You can always download your private key because we save a copy ot it with us.',
                   onPress: () => _downloadKeyFile(
                     context,
                     store.auth.userData.publicKey,
                     'PublicKey_${store.auth.userData.userId}',
                   ),
                   isLast: true,
+                  isFirst: true,
                   icon: CupertinoIcons.download_circle,
                   iconColor: iconColor,
                 ),
@@ -272,8 +232,7 @@ class Settings extends StatelessWidget {
                 else
                   _Tile(
                     title: 'Export Accounts',
-                    subtitle:
-                        'You can always export your data if you wish to use another app.',
+                    subtitle: 'You can always export your data if you wish to use another app.',
                     onPress: () => _navigateToExportAccounts(context),
                     isFirst: true,
                     isLast: true,
@@ -293,8 +252,7 @@ class Settings extends StatelessWidget {
                 const SizedBox(height: 20),
                 _Tile(
                   title: 'Logout',
-                  subtitle:
-                      'Private key will be detached and user data will be delete from this device.',
+                  subtitle: 'Private key will be detached and user data will be delete from this device.',
                   onPress: () => _logout(context),
                   isFirst: true,
                   isLast: true,
@@ -365,9 +323,7 @@ class _Tile extends StatelessWidget {
                           child: Text(
                             subtitle,
                             maxLines: 2,
-                            style: CupertinoTheme.of(context)
-                                .textTheme
-                                .tabLabelTextStyle,
+                            style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle,
                           ),
                         ),
                       ),

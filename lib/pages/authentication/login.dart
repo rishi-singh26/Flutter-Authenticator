@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:authenticator/modals/user_modal.dart' as user_modal;
 import 'package:authenticator/pages/authentication/reset_pass.dart';
 import 'package:authenticator/pages/authentication/signup.dart';
 import 'package:authenticator/redux/auth/auth_action.dart';
+import 'package:authenticator/redux/pvKey/pv_key_action.dart';
 import 'package:authenticator/redux/store/app.state.dart';
+import 'package:authenticator/shared/functions/crypto_service.dart';
 import 'package:authenticator/shared/functions/regex.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -122,19 +127,13 @@ class _LoginState extends State<Login> {
     });
 
     try {
-      UserCredential value = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
+      UserCredential value = await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
 
       String userId = value.user!.uid;
-      QuerySnapshot<Map<String, dynamic>> users = await FirebaseFirestore
-          .instance
-          .collection('users')
-          .where('userId', isEqualTo: userId)
-          .get();
+      QuerySnapshot<Map<String, dynamic>> users = await FirebaseFirestore.instance.collection('users').where('userId', isEqualTo: userId).get();
 
       if (users.size < 1) {
-        showDilogue(
-            'Error while login\nUser not found\n${users.docs.toString()}');
+        showDilogue('Error while login\nUser not found\n${users.docs.toString()}');
         setState(() {
           showSpinner = false;
         });
@@ -145,7 +144,19 @@ class _LoginState extends State<Login> {
         email: value.user!.email ?? '',
         publicKey: user['publicKey'],
         userId: userId,
+        pbkdfSalt: user['pbkdfSalt'],
+        privateKey: user['privateKey'],
+        pvtKeySalt: user['pvtKeySalt'],
       );
+      final pbkdfKey = CryptoService.generatePBKDF(password, newUser.pbkdfSalt);
+      // ignore: use_build_context_synchronously
+      StoreProvider.of<AppState>(context).dispatch(AttachKeyAction(
+        key: const Latin1Codec().decode(CryptoService.decrypt(
+          pbkdfKey,
+          Uint8List.fromList(const Latin1Codec().encode(newUser.pvtKeySalt)),
+          Uint8List.fromList(const Latin1Codec().encode(newUser.privateKey)),
+        )),
+      ));
       // ignore: use_build_context_synchronously
       StoreProvider.of<AppState>(context).dispatch(LoginAction(user: newUser));
     } on FirebaseAuthException catch (e) {
@@ -161,8 +172,7 @@ class _LoginState extends State<Login> {
         });
       }
     } catch (e) {
-      StoreProvider.of<AppState>(context)
-          .dispatch(LoginErrAction(errMess: e.toString()));
+      StoreProvider.of<AppState>(context).dispatch(LoginErrAction(errMess: e.toString()));
       showDilogue(e.toString());
 
       setState(() {
@@ -175,8 +185,7 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       // backgroundColor: CupertinoTheme.of(context).barBackgroundColor,
-      navigationBar:
-          const CupertinoNavigationBar(middle: Text('Authenticator')),
+      navigationBar: const CupertinoNavigationBar(middle: Text('Authenticator')),
       child: ListView(
         children: [
           const SizedBox(height: 20.0),
@@ -187,8 +196,7 @@ class _LoginState extends State<Login> {
           ),
           const SizedBox(height: 20.0),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             child: CupertinoTextField(
               placeholder: 'Email',
               controller: emailController,
@@ -202,8 +210,7 @@ class _LoginState extends State<Login> {
             ),
           ),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             child: CupertinoTextField(
               placeholder: 'Password',
               controller: passwordController,
@@ -222,10 +229,7 @@ class _LoginState extends State<Login> {
                 padding: EdgeInsets.zero,
                 child: Icon(
                   hidePassword ? CupertinoIcons.eye_slash : CupertinoIcons.eye,
-                  color: CupertinoTheme.of(context)
-                      .textTheme
-                      .tabLabelTextStyle
-                      .color,
+                  color: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.color,
                   size: 20,
                 ),
                 onPressed: () => _setHidePass(!hidePassword),
@@ -248,8 +252,7 @@ class _LoginState extends State<Login> {
           ),
           const SizedBox(height: 30.0),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 35.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(horizontal: 35.0, vertical: 10.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -282,8 +285,7 @@ class _LoginState extends State<Login> {
                     //   duration: const Duration(milliseconds: 300),
                     //   curve: Curves.easeIn,
                     // );
-                    Navigator.push(context, CupertinoPageRoute<Widget>(
-                        builder: (BuildContext context) {
+                    Navigator.push(context, CupertinoPageRoute<Widget>(builder: (BuildContext context) {
                       return const ResetPassword();
                     }));
                   },

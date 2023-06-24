@@ -16,9 +16,7 @@ class AppState {
       );
 
   @override
-  bool operator ==(other) =>
-      identical(this, other) ||
-      other is AppState && runtimeType == other.runtimeType;
+  bool operator ==(other) => identical(this, other) || other is AppState && runtimeType == other.runtimeType;
 
   @override
   // ignore: unnecessary_overrides
@@ -31,12 +29,8 @@ class AppState {
 
   static AppState fromJson(dynamic json) {
     return AppState(
-      auth: json == null
-          ? AuthState.initialState()
-          : AuthState.fromJson(json['auth']),
-      pvKey: json == null
-          ? PrivateKeyState.initialState()
-          : PrivateKeyState.fromJson(json['pvKey']),
+      auth: json == null ? AuthState.initialState() : AuthState.fromJson(json['auth']),
+      pvKey: json == null ? PrivateKeyState.initialState() : PrivateKeyState.fromJson(json['pvKey']),
     );
   }
 

@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:authenticator/modals/user_modal.dart' as user_modal;
 import 'package:authenticator/redux/auth/auth_action.dart';
 import 'package:authenticator/redux/store/app.state.dart';
 import 'package:authenticator/shared/functions/file_system.dart';
-import 'package:authenticator/shared/functions/rsa.dart';
+import 'package:authenticator/shared/functions/crypto_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypton/crypton.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -34,7 +36,7 @@ class _KeypairPageState extends State<KeypairPage> {
   void initState() {
     pbKeyInpCtrl.text = 'PublicKey';
     pvKeyInpCtrl.text = 'PrivateKey';
-    keyPair = Encrypt.getKeyPair();
+    keyPair = CryptoService.getKeyPair();
     super.initState();
   }
 
@@ -57,8 +59,7 @@ class _KeypairPageState extends State<KeypairPage> {
     );
   }
 
-  downloadPublicKey(
-      BuildContext context, String key, String filename, String type) async {
+  downloadPublicKey(BuildContext context, String key, String filename, String type) async {
     if (filename.isEmpty) {
       _showAlert(context, 'Enter $type Key file name!');
       return;
@@ -72,8 +73,7 @@ class _KeypairPageState extends State<KeypairPage> {
       return;
     }
     String pbKeyFilePath = '${dirResp.path}/$filename.pem';
-    WriteFileResp writeFileResp =
-        await FS.writeFileContents(File(pbKeyFilePath), key);
+    WriteFileResp writeFileResp = await FS.writeFileContents(File(pbKeyFilePath), key);
     if (!writeFileResp.status) {
       // ignore: use_build_context_synchronously
       _showAlert(
@@ -89,16 +89,28 @@ class _KeypairPageState extends State<KeypairPage> {
       showSpinner = true;
     });
     try {
-      UserCredential user =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential user = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: widget.email,
         password: widget.password,
+      );
+
+      final pbkfdSalt = CryptoService.generateRandomSalt();
+      final pbkdfKey = CryptoService.generatePBKDF(widget.password, pbkfdSalt);
+
+      final privateKeySalt = CryptoService.generateRandomSalt();
+      final encryptedPrivateKey = CryptoService.encrypt(
+        pbkdfKey,
+        Uint8List.fromList(privateKeySalt.codeUnits),
+        Uint8List.fromList(keyPair.privateKey.toFormattedPEM().codeUnits),
       );
 
       Map<String, dynamic> userData = {
         'userId': user.user!.uid,
         'publicKey': keyPair.publicKey.toFormattedPEM(),
         'email': widget.email,
+        'pbkdfSalt': pbkfdSalt,
+        'privateKey': const Latin1Codec().decode(encryptedPrivateKey),
+        'pvtKeySalt': privateKeySalt,
       };
       await FirebaseFirestore.instance.collection('users').add(userData);
 
@@ -106,8 +118,7 @@ class _KeypairPageState extends State<KeypairPage> {
       // ignore: use_build_context_synchronously
       StoreProvider.of<AppState>(context).dispatch(LoginAction(user: newUser));
     } catch (e) {
-      StoreProvider.of<AppState>(context)
-          .dispatch(LoginErrAction(errMess: e.toString()));
+      StoreProvider.of<AppState>(context).dispatch(LoginErrAction(errMess: e.toString()));
       showCupertinoDialog(
         context: context,
         builder: (context) => CupertinoAlertDialog(
@@ -174,24 +185,21 @@ class _KeypairPageState extends State<KeypairPage> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   TextSpan(
-                    text:
-                        " The 'PUBLIC KEY' by name is public and is available to every ",
+                    text: " The 'PUBLIC KEY' by name is public and is available to every ",
                   ),
                   TextSpan(
                     text: 'Encrypto',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   TextSpan(
-                    text:
-                        " user, this key is used to encrypt your data, but to decrypt your data, the 'PRIVATE KEY' is required and",
+                    text: " user, this key is used to encrypt your data, but to decrypt your data, the 'PRIVATE KEY' is required and",
                   ),
                   TextSpan(
                     text: ' only you have access to your private key',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   TextSpan(
-                    text:
-                        '\n\nTherefore the security of your peivate key is your responsiblity and you have to make sure you do not loose this key.',
+                    text: '\n\nTherefore the security of your peivate key is your responsiblity and you have to make sure you do not loose this key.',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   TextSpan(
@@ -246,8 +254,7 @@ class _KeypairPageState extends State<KeypairPage> {
                     style: CupertinoTheme.of(context).textTheme.textStyle,
                   ),
                   TextSpan(
-                    text:
-                        '\n\nYou can keep a copy your public key. You can also download your public key later.',
+                    text: '\n\nYou can keep a copy your public key. You can also download your public key later.',
                     style: CupertinoTheme.of(context).textTheme.textStyle,
                   ),
                 ],
@@ -261,11 +268,7 @@ class _KeypairPageState extends State<KeypairPage> {
               controller: pbKeyInpCtrl,
               placeholder: 'Enter file name ex. PublicKey',
               suffix: CupertinoButton(
-                onPressed: () => downloadPublicKey(
-                    context,
-                    keyPair.publicKey.toFormattedPEM(),
-                    pbKeyInpCtrl.text,
-                    'Public'),
+                onPressed: () => downloadPublicKey(context, keyPair.publicKey.toFormattedPEM(), pbKeyInpCtrl.text, 'Public'),
                 child: const Icon(CupertinoIcons.cloud_download),
               ),
             ),
@@ -319,8 +322,7 @@ class _KeypairPageState extends State<KeypairPage> {
                     style: CupertinoTheme.of(context).textTheme.textStyle,
                   ),
                   TextSpan(
-                    text:
-                        '\n\nYou will need a copy your private key. Without it you will',
+                    text: '\n\nYou will need a copy your private key. Without it you will',
                     style: CupertinoTheme.of(context).textTheme.textStyle,
                   ),
                   const TextSpan(
@@ -331,8 +333,7 @@ class _KeypairPageState extends State<KeypairPage> {
                     ),
                   ),
                   TextSpan(
-                    text:
-                        "be able to access your data. It is your responsiblity to manage",
+                    text: "be able to access your data. It is your responsiblity to manage",
                     style: CupertinoTheme.of(context).textTheme.textStyle,
                   ),
                   const TextSpan(
@@ -368,11 +369,7 @@ class _KeypairPageState extends State<KeypairPage> {
               controller: pvKeyInpCtrl,
               placeholder: 'Enter file name ex. PrivateKey',
               suffix: CupertinoButton(
-                onPressed: () => downloadPublicKey(
-                    context,
-                    keyPair.privateKey.toFormattedPEM(),
-                    pvKeyInpCtrl.text,
-                    'Private'),
+                onPressed: () => downloadPublicKey(context, keyPair.privateKey.toFormattedPEM(), pvKeyInpCtrl.text, 'Private'),
                 child: const Icon(CupertinoIcons.cloud_download),
               ),
             ),
