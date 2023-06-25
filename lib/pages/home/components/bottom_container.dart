@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 
 class BottomContainer extends StatelessWidget {
@@ -15,9 +17,11 @@ class BottomContainer extends StatelessWidget {
           top: BorderSide(width: 0.1, color: CupertinoColors.separator),
         ),
       ),
-      padding: const EdgeInsets.symmetric(
-        vertical: 10.0,
-        horizontal: 15.0,
+      padding: EdgeInsets.only(
+        top: 10.0,
+        bottom: Platform.isIOS ? 40 : 10,
+        left: 15.0,
+        right: 15.0,
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -34,10 +38,7 @@ class BottomContainer extends StatelessWidget {
               Text(
                 'Synchronised',
                 style: TextStyle(
-                  color: CupertinoTheme.of(context)
-                      .textTheme
-                      .tabLabelTextStyle
-                      .color,
+                  color: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.color,
                   fontSize: 14,
                 ),
               ),
