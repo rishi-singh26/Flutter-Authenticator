@@ -1,10 +1,9 @@
-import 'dart:developer';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:authenticator/pages/scanner/components/bottom_buttons.dart';
 import 'package:authenticator/pages/scanner/components/select_accounts.dart';
 import 'package:authenticator/pages/scanner/functions.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 class Scanner extends StatefulWidget {
   const Scanner({Key? key}) : super(key: key);
@@ -14,95 +13,69 @@ class Scanner extends StatefulWidget {
 }
 
 class _ScannerState extends State<Scanner> {
-  QRViewController? controller;
   bool flashState = false;
   bool backCam = true;
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
+  late MobileScannerController cameraController;
 
   @override
-  void reassemble() {
-    super.reassemble();
-    if (Platform.isAndroid) {
-      controller!.pauseCamera();
-    }
-    controller!.resumeCamera();
+  void initState() {
+    cameraController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: backCam ? CameraFacing.back : CameraFacing.front,
+      torchEnabled: flashState,
+    );
+    super.initState();
   }
 
   Widget _buildQrView(BuildContext context) {
-    var scanArea = (MediaQuery.of(context).size.width < 400 ||
-            MediaQuery.of(context).size.height < 400)
-        ? 150.0
-        : 300.0;
-    return QRView(
-      key: qrKey,
-      onQRViewCreated: (controller) => _onQRViewCreated(controller, context),
-      overlay: QrScannerOverlayShape(
-        borderColor: CupertinoTheme.of(context).primaryColor,
-        borderRadius: 10,
-        borderLength: 30,
-        borderWidth: 10,
-        cutOutSize: scanArea,
-      ),
-      onPermissionSet: (ctrl, p) => _onPermissionSet(context, ctrl, p),
+    return MobileScanner(
+      // fit: BoxFit.contain,
+      controller: cameraController,
+      onDetect: (capture) {
+        final List<Barcode> barcodes = capture.barcodes;
+        final Uint8List? image = capture.image;
+        for (final barcode in barcodes) {
+          _onQRCodeDetect(barcode.rawValue ?? '', cameraController);
+        }
+      },
     );
   }
 
-  void _onQRViewCreated(QRViewController controller, BuildContext context) {
-    setState(() {
-      this.controller = controller;
-    });
-    controller.resumeCamera();
-    controller.scannedDataStream.listen((scanData) {
-      try {
-        final String scanResult = scanData.code ?? '';
-        final Uri uriComponents = Uri.parse(scanResult);
-        if (uriComponents.isScheme('otpauth')) {
-          controller.pauseCamera();
-          String issuer = uriComponents.queryParameters.containsKey('issuer')
-              ? uriComponents.queryParameters['issuer'].toString()
-              : '';
-          _showDilogue(
-            context,
-            'Account detected!',
-            "Do you want to add \"${issuer.isEmpty ? 'this account' : issuer}\"?",
-            () {
-              addAccount(context, scanResult, uriComponents);
-            },
-          );
-        }
-        if (uriComponents.isScheme('otpauth-migration')) {
-          controller.pauseCamera();
-          _showDilogue(
-            context,
-            'Multiple accounts detected!',
-            "Do you want to continue?",
-            () {
-              Navigator.of(context).pushReplacement(
-                CupertinoPageRoute(
-                  fullscreenDialog: true,
-                  builder: (context) => SelectAccounts(scanResult: scanResult),
-                ),
-              );
-            },
-          );
-        }
-      } catch (e) {
-        return;
-        // print(e);
+  _onQRCodeDetect(String scanResult, MobileScannerController controller) {
+    try {
+      final Uri uriComponents = Uri.parse(scanResult);
+      if (uriComponents.isScheme('otpauth')) {
+        controller.stop();
+        String issuer = uriComponents.queryParameters.containsKey('issuer') ? uriComponents.queryParameters['issuer'].toString() : '';
+        _showDilogue(
+          context,
+          'Account detected!',
+          "Do you want to add \"${issuer.isEmpty ? 'this account' : issuer}\"?",
+          () {
+            addAccount(context, scanResult, uriComponents);
+          },
+        );
       }
-    });
-  }
-
-  void _onPermissionSet(BuildContext context, QRViewController ctrl, bool p) {
-    log('${DateTime.now().toIso8601String()}_onPermissionSet $p');
-    if (!p) {
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => const CupertinoAlertDialog(
-          title: Text('Alert!'),
-          content: Text('Camera permission denied'),
-        ),
-      );
+      if (uriComponents.isScheme('otpauth-migration')) {
+        controller.stop();
+        _showDilogue(
+          context,
+          'Multiple accounts detected!',
+          "Do you want to continue?",
+          () {
+            Navigator.of(context).pushReplacement(
+              CupertinoPageRoute(
+                fullscreenDialog: true,
+                builder: (context) => SelectAccounts(scanResult: scanResult),
+              ),
+            );
+          },
+        );
+      }
+    } catch (e) {
+      return;
+      // print(e);
     }
   }
 
@@ -119,8 +92,7 @@ class _ScannerState extends State<Scanner> {
     }
   }
 
-  _showDilogue(
-      BuildContext topContext, String title, String content, Function onPress) {
+  _showDilogue(BuildContext topContext, String title, String content, Function onPress) {
     showCupertinoDialog(
       context: topContext,
       builder: (context) {
@@ -137,7 +109,7 @@ class _ScannerState extends State<Scanner> {
             CupertinoDialogAction(
               isDestructiveAction: true,
               onPressed: () {
-                controller?.resumeCamera();
+                cameraController.start();
                 Navigator.of(context).pop();
               },
               child: const Text('Cancel'),
@@ -157,7 +129,7 @@ class _ScannerState extends State<Scanner> {
 
   @override
   void dispose() {
-    controller?.dispose();
+    cameraController.dispose();
     super.dispose();
   }
 
@@ -194,13 +166,11 @@ class _ScannerState extends State<Scanner> {
                         ScannerButtons(
                           flashState: flashState,
                           onCamPress: () async {
-                            await controller?.flipCamera();
                             setState(() {
                               backCam = !backCam;
                             });
                           },
                           onFlashPress: () async {
-                            await controller?.toggleFlash();
                             setState(() {
                               flashState = !flashState;
                             });

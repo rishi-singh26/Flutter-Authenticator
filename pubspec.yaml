@@ -39,7 +39,8 @@ dependencies:
   firebase_auth: ^4.6.3
   firebase_app_check: ^0.1.4+3
   rsa_encrypt: ^2.0.0
-  qr_code_scanner: ^1.0.0
+  # qr_code_scanner: ^1.0.0
+  mobile_scanner: ^3.2.0
   crypton: ^2.1.0
   redux: ^5.0.0
   flutter_redux: ^0.10.0
